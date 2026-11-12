@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
+  <!-- Bayangan brutalist -->
+  <rect x="8" y="8" width="52" height="52" rx="10" fill="#141414"/>
+  <!-- Blok neon + garis tinta -->
+  <rect x="3" y="3" width="52" height="52" rx="10" fill="#C6FF3D" stroke="#141414" stroke-width="4"/>
+  <!-- Huruf H -->
+  <rect x="15" y="12" width="8" height="26" fill="#141414"/>
+  <rect x="35" y="12" width="8" height="26" fill="#141414"/>
+  <rect x="15" y="21" width="28" height="8" fill="#141414"/>
+  <!-- Tanda minus: sisa yang ngepas -->
+  <rect x="15" y="43" width="28" height="5" fill="#141414"/>
+</svg>
