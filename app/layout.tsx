@@ -1,18 +1,24 @@
 import type { Metadata, Viewport } from 'next';
-import { JetBrains_Mono, Space_Grotesk } from 'next/font/google';
+import localFont from 'next/font/local';
 import './globals.css';
 
-// next/font meng-host font sendiri: tanpa request ke Google, tanpa layout shift.
-const spaceGrotesk = Space_Grotesk({
-  subsets: ['latin'],
-  weight: ['400', '500', '700'],
+// Font di-host sendiri dari paket @fontsource: build tidak bergantung pada Google Fonts.
+
+const spaceGrotesk = localFont({
+  src: [
+    { path: '../node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-500-normal.woff2', weight: '500', style: 'normal' },
+    { path: '../node_modules/@fontsource/space-grotesk/files/space-grotesk-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
   variable: '--font-space-grotesk',
   display: 'swap',
 });
 
-const jetbrainsMono = JetBrains_Mono({
-  subsets: ['latin'],
-  weight: ['400', '700'],
+const jetbrainsMono = localFont({
+  src: [
+    { path: '../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-400-normal.woff2', weight: '400', style: 'normal' },
+    { path: '../node_modules/@fontsource/jetbrains-mono/files/jetbrains-mono-latin-700-normal.woff2', weight: '700', style: 'normal' },
+  ],
   variable: '--font-jetbrains-mono',
   display: 'swap',
 });
