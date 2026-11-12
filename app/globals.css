@@ -1,0 +1,535 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------ */
+/* 1. Token                                                            */
+/* ------------------------------------------------------------------ */
+@layer base {
+  :root {
+    /* Channel RGB (tanpa koma) supaya bisa dipakai rgb(var(--x) / alpha) */
+    --kertas: 244 239 230; /* #F4EFE6 */
+    --kertas-lipat: 229 221 206; /* #E5DDCE */
+    --kertas-paylater: 255 229 230; /* #FFE5E6 */
+    --tinta: 20 20 20; /* #141414 */
+    --tinta-pudar: 92 88 80; /* #5C5850 — 6,1:1 di atas kertas */
+    --minus: 229 56 59; /* #E5383B */
+    --minus-teks: 193 18 31; /* #C1121F — 5,4:1 di atas kertas */
+    --aman: 45 198 83; /* #2DC653 */
+    --aman-teks: 21 112 47; /* #15702F — 5,3:1 di atas kertas */
+    --neon: 198 255 61; /* #C6FF3D */
+    --selotip: 226 205 150; /* masking tape, selalu semi-transparan */
+
+    --zigzag: 7px; /* ukuran gigi sobekan struk */
+    color-scheme: light;
+  }
+
+  html {
+    -webkit-text-size-adjust: 100%;
+    -webkit-tap-highlight-color: transparent;
+    /* scroll-behavior sengaja tidak diset: Lenis yang mengatur */
+  }
+
+  /* Lenis (setara lenis/dist/lenis.css) */
+  html.lenis,
+  html.lenis body {
+    height: auto;
+  }
+  .lenis.lenis-smooth {
+    scroll-behavior: auto !important;
+  }
+  .lenis.lenis-stopped {
+    overflow: hidden;
+  }
+
+  body {
+    @apply bg-kertas font-display text-tinta antialiased;
+    min-height: 100dvh;
+    overflow-x: hidden;
+    text-rendering: optimizeLegibility;
+  }
+
+  ::selection {
+    background: rgb(var(--neon));
+    color: rgb(var(--tinta));
+  }
+
+  :focus-visible {
+    outline: 3px solid rgb(var(--tinta));
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  /* Angka selalu sejajar kolom, di mana pun dipakai */
+  .font-mono,
+  [data-angka] {
+    font-variant-numeric: tabular-nums;
+    font-feature-settings: 'zero' 1; /* nol bergaris, biar beda dari huruf O */
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 2. Komponen dasar                                                   */
+/* ------------------------------------------------------------------ */
+@layer components {
+  /*
+   * Tekstur kertas thermal.
+   * Lapis 1: bintik serat (SVG noise, ±0,5 KB, tanpa request gambar).
+   * Lapis 2: garis halus horizontal, bekas head printer.
+   * Lapis 3: gradasi tipis kiri-kanan, kertas agak melengkung.
+   */
+  .tekstur-thermal {
+    background-color: rgb(var(--kertas));
+    background-image:
+      url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .08 0 0 0 0 .08 0 0 0 0 .08 0 0 0 .55 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.14'/%3E%3C/svg%3E"),
+      repeating-linear-gradient(
+        to bottom,
+        transparent 0 2px,
+        rgb(var(--tinta) / 0.018) 2px 3px
+      ),
+      linear-gradient(
+        to right,
+        rgb(var(--tinta) / 0.05),
+        transparent 12% 88%,
+        rgb(var(--tinta) / 0.05)
+      );
+    background-size: 160px 160px, auto, auto;
+  }
+
+  /* Varian struk paylater (scene 05b): cukup ganti warna dasar */
+  .tekstur-thermal[data-jalur='paylater'] {
+    background-color: rgb(var(--kertas-paylater));
+  }
+
+  /* Lembar struk: lebar 80mm, ujung bawah bergerigi bekas disobek */
+  .struk {
+    @apply tekstur-thermal relative mx-auto w-full max-w-struk font-mono text-struk text-tinta shadow-struk;
+    padding: 1.25rem 1rem calc(1.5rem + var(--zigzag));
+    -webkit-mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg)
+      50% / calc(2 * var(--zigzag)) 100%;
+    mask: conic-gradient(from -45deg at bottom, #0000, #000 1deg 89deg, #0000 90deg) 50% /
+      calc(2 * var(--zigzag)) 100%;
+    transition: background-color 600ms ease;
+  }
+
+  /* Satu baris struk: nama di kiri, titik-titik, nominal di kanan */
+  .struk-baris {
+    display: flex;
+    align-items: baseline;
+    gap: 0.5rem;
+    min-height: 1.75rem;
+  }
+  .struk-baris > .isi {
+    flex: 1;
+    border-bottom: 1px dotted rgb(var(--tinta) / 0.35);
+    transform: translateY(-0.25em);
+  }
+
+  /* Garis putus-putus sebelum TOTAL */
+  .garis-putus {
+    height: 1px;
+    border: 0;
+    margin: 0.75rem 0;
+    background: repeating-linear-gradient(
+      to right,
+      rgb(var(--tinta)) 0 6px,
+      transparent 6px 10px
+    );
+  }
+
+  /* Tinta thermal yang mulai pudar, untuk catatan kaki struk */
+  .tinta-pudar {
+    color: rgb(var(--tinta-pudar));
+  }
+
+  /*
+   * CTA utama: satu-satunya tempat neon dipakai.
+   * --mx/--my diisi MagneticCTA (desktop). Ditekan: tombol "masuk" ke bayangannya
+   * dan gepeng sedikit, lalu memantul balik saat dilepas (ease pegas).
+   */
+  .tombol-cta {
+    @apply inline-flex min-h-sentuh w-full items-center justify-center rounded-chip border-2 border-tinta bg-neon px-6 py-4 font-display text-lg font-bold text-tinta shadow-tombol;
+    --mx: 0px;
+    --my: 0px;
+    transform: translate3d(var(--mx), var(--my), 0);
+    transition:
+      transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1),
+      box-shadow 340ms cubic-bezier(0.34, 1.56, 0.64, 1);
+    touch-action: manipulation;
+  }
+  .tombol-cta:active:not(:disabled) {
+    @apply shadow-tombol-tekan;
+    transform: translate3d(calc(var(--mx) + 3px), calc(var(--my) + 3px), 0) scale(0.985, 0.94);
+    transition-duration: 70ms;
+  }
+  .tombol-cta:disabled {
+    @apply cursor-not-allowed bg-kertas-lipat text-tinta-pudar shadow-none;
+  }
+
+  /* Tombol sekunder: "Balik", "Nggak dulu", "Skip" */
+  .tombol-polos {
+    @apply inline-flex min-h-sentuh items-center justify-center rounded-chip border-2 border-tinta bg-transparent px-5 py-3 font-display font-medium text-tinta;
+  }
+
+  /* Chip pilihan (status, kota) */
+  .chip {
+    @apply inline-flex min-h-sentuh items-center justify-center rounded-chip border-2 border-tinta bg-kertas px-5 py-3 font-display font-medium text-tinta;
+    transition:
+      background-color 160ms ease,
+      color 160ms ease;
+  }
+  .chip[aria-pressed='true'],
+  .chip[aria-checked='true'] {
+    @apply animate-lompat bg-tinta text-kertas;
+  }
+
+  /* Bingkai satu scene: tinggi penuh, tombol utama menempel di zona jempol */
+  .scene {
+    @apply relative mx-auto flex min-h-[100dvh] w-full max-w-scene flex-col px-5;
+    padding-top: calc(4.5rem + env(safe-area-inset-top, 0px));
+  }
+  .scene .zona-jempol {
+    position: sticky;
+    bottom: 0;
+    z-index: 20;
+    margin-top: auto;
+    padding-top: 1.75rem;
+    padding-bottom: calc(1rem + env(safe-area-inset-bottom, 0px));
+    background: linear-gradient(to top, rgb(var(--kertas)) 72%, rgb(var(--kertas) / 0));
+  }
+
+  /*
+   * Desktop (lg): "meja kasir" dua kolom asimetris, 5 + 7 dari 12.
+   * Di bawah 1024px kedua kolom lebur (display: contents), jadi urutan DOM = urutan
+   * tampil dan .zona-jempol tetap menempel ke .scene seperti biasa.
+   */
+  .scene-split > .kolom-kiri,
+  .scene-split > .kolom-kanan {
+    display: contents;
+  }
+  @media (min-width: 1024px) {
+    .scene.scene-split {
+      display: grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      column-gap: 3.5rem;
+      align-items: start;
+      max-width: 84rem;
+      padding-inline: 3rem;
+      padding-top: calc(6.5rem + env(safe-area-inset-top, 0px));
+    }
+    .scene-split > .kolom-kiri {
+      display: block;
+      grid-column: span 5;
+      position: sticky;
+      top: calc(6.5rem + env(safe-area-inset-top, 0px));
+    }
+    .scene-split > .kolom-kanan {
+      display: flex;
+      flex-direction: column;
+      grid-column: span 7;
+      min-height: calc(100dvh - 6.5rem - env(safe-area-inset-top, 0px));
+    }
+    /* CTA di kolom lebar: selebar isinya, bukan selebar kolom */
+    .scene-split .zona-jempol > .tombol-cta {
+      width: auto;
+      min-width: 20rem;
+    }
+  }
+
+  /*
+   * Varian poster (hero): kolom teks 7, kolom visual 5.
+   * Di HP urutan tampil diatur lewat order: teks → visual → zona jempol.
+   */
+  .scene-split.poster .urut-visual {
+    order: 1;
+  }
+  .scene-split.poster .zona-jempol {
+    order: 2;
+  }
+  @media (min-width: 1024px) {
+    .scene.scene-split.poster {
+      align-items: stretch;
+      padding-top: 5rem;
+      padding-bottom: 1.5rem;
+    }
+    .scene-split.poster > .kolom-kiri {
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      grid-column: span 7;
+      position: static;
+    }
+    .scene-split.poster > .kolom-kanan {
+      grid-column: span 5;
+      min-height: 0;
+      justify-content: center;
+    }
+    .scene-split.poster .zona-jempol {
+      position: static;
+      margin-top: 1.75rem;
+      padding: 0;
+      background: none;
+    }
+  }
+
+  /* Judul scene: di desktop jadi display editorial raksasa */
+  .judul-editorial {
+    @apply text-judul font-bold text-tinta outline-none;
+  }
+  @media (min-width: 1024px) {
+    .judul-editorial {
+      font-size: clamp(3.5rem, 5.2vw, 5.5rem);
+      line-height: 0.92;
+      letter-spacing: -0.045em;
+    }
+  }
+
+  /* Micro-label: lawan kontras dari display raksasa */
+  .mikro {
+    @apply font-mono uppercase;
+    font-size: 0.625rem;
+    line-height: 1.4;
+    letter-spacing: 0.2em;
+  }
+
+  /* Baris buku besar: kode akun · nama · nominal */
+  .ledger {
+    @apply font-mono text-struk text-tinta;
+    display: flex;
+    align-items: baseline;
+    gap: 0.75rem;
+    padding: 0.45rem 0;
+    border-bottom: 1px dashed rgb(var(--tinta) / 0.35);
+  }
+  .ledger > .kode {
+    @apply mikro text-tinta-pudar;
+    flex: none;
+    width: 3.75rem;
+  }
+  .ledger > .nilai {
+    margin-left: auto;
+    white-space: nowrap;
+    font-weight: 700;
+  }
+
+  /*
+   * Selotip kertas (washi). Taruh di dalam elemen relative, atur posisi dengan
+   * utilitas (-top-3 left-6, dst.) dan kemiringan lewat --putar.
+   */
+  .selotip {
+    position: absolute;
+    z-index: 5;
+    width: 4.75rem;
+    height: 1.4rem;
+    pointer-events: none;
+    background: repeating-linear-gradient(
+      90deg,
+      rgb(var(--selotip) / 0.72) 0 5px,
+      rgb(var(--selotip) / 0.58) 5px 6px
+    );
+    mix-blend-mode: multiply;
+    transform: rotate(var(--putar, -3deg));
+    clip-path: polygon(0 0, 2.5% 25%, 0 50%, 2.5% 75%, 0 100%, 100% 100%, 97.5% 75%, 100% 50%, 97.5% 25%, 100% 0);
+  }
+
+  /*
+   * Stempel tinta: tepi dan isi "bolong-bolong" lewat mask noise (±0,4 KB).
+   * Rotasi tipis lewat --putar (-2deg … 3deg). Warna ikut currentColor.
+   */
+  .stempel {
+    @apply font-mono font-bold uppercase;
+    display: inline-block;
+    padding: 0.35em 0.7em;
+    border: 3px solid currentColor;
+    border-radius: 6px;
+    letter-spacing: 0.12em;
+    line-height: 1.15;
+    transform: rotate(var(--putar, -2deg));
+    -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -6 0 0 0 4.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+    mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='140' height='140'%3E%3Cfilter id='s'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.85' numOctaves='2' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 -6 0 0 0 4.6'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23s)'/%3E%3C/svg%3E");
+    -webkit-mask-size: 140px 140px;
+    mask-size: 140px 140px;
+  }
+
+  /* Ujung kertas struk yang ngintip dari mesin kasir: gerigi di sisi ATAS */
+  .struk-intip {
+    @apply tekstur-thermal font-mono text-tinta;
+    font-size: 0.6875rem;
+    line-height: 1.5;
+    padding: calc(0.6rem + var(--zigzag)) 0.75rem 0.5rem;
+    -webkit-mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) 50% /
+      calc(2 * var(--zigzag)) 100%;
+    mask: conic-gradient(from 135deg at top, #0000, #000 1deg 89deg, #0000 90deg) 50% /
+      calc(2 * var(--zigzag)) 100%;
+  }
+
+  /*
+   * Slider uang (MoneySlider). Tetap <input type="range"> asli supaya keyboard
+   * dan pembaca layar jalan tanpa kerja tambahan; yang diubah hanya tampilannya.
+   * --isi diisi dari komponen: posisi tengah thumb.
+   */
+  .slider-uang {
+    -webkit-appearance: none;
+    appearance: none;
+    display: block;
+    width: 100%;
+    height: 44px;
+    margin: 0;
+    background: transparent;
+    cursor: pointer;
+    touch-action: pan-y;
+  }
+  .slider-uang::-webkit-slider-runnable-track {
+    box-sizing: border-box;
+    height: 12px;
+    border: 2px solid rgb(var(--tinta));
+    border-radius: 999px;
+    background: linear-gradient(
+      to right,
+      rgb(var(--tinta)) var(--isi, 0%),
+      rgb(var(--kertas)) var(--isi, 0%)
+    );
+  }
+  .slider-uang::-webkit-slider-thumb {
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    margin-top: -18px;
+    border: 3px solid rgb(var(--tinta));
+    border-radius: 50%;
+    background: rgb(var(--kertas));
+    box-shadow: 0 4px 0 rgb(var(--tinta));
+  }
+  .slider-uang::-moz-range-track {
+    box-sizing: border-box;
+    height: 12px;
+    border: 2px solid rgb(var(--tinta));
+    border-radius: 999px;
+    background: rgb(var(--kertas));
+  }
+  .slider-uang::-moz-range-progress {
+    height: 12px;
+    border-radius: 999px;
+    background: rgb(var(--tinta));
+  }
+  .slider-uang::-moz-range-thumb {
+    box-sizing: border-box;
+    width: 44px;
+    height: 44px;
+    border: 3px solid rgb(var(--tinta));
+    border-radius: 50%;
+    background: rgb(var(--kertas));
+    box-shadow: 0 4px 0 rgb(var(--tinta));
+  }
+  .slider-uang:focus-visible {
+    outline: none;
+  }
+  .slider-uang:focus-visible::-webkit-slider-thumb {
+    outline: 3px solid rgb(var(--tinta));
+    outline-offset: 3px;
+  }
+  .slider-uang:focus-visible::-moz-range-thumb {
+    outline: 3px solid rgb(var(--tinta));
+    outline-offset: 3px;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 3. Utilitas                                                         */
+/* ------------------------------------------------------------------ */
+@layer utilities {
+  .sisa-aman {
+    color: rgb(var(--aman-teks));
+  }
+  .sisa-minus {
+    color: rgb(var(--minus-teks));
+    animation: kedip 1s steps(1, end) infinite;
+  }
+
+  /* Hanya untuk pembaca layar */
+  .hanya-sr {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    white-space: nowrap;
+  }
+
+  /*
+   * Grain serat kertas di atas seluruh layar: statis (tanpa animasi), satu
+   * data-URI ±0,6 KB, multiply supaya hanya menggelapkan sedikit.
+   */
+  .grain {
+    position: fixed;
+    inset: 0;
+    z-index: 70;
+    pointer-events: none;
+    opacity: 0.09;
+    mix-blend-mode: multiply;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='220' height='220'%3E%3Cfilter id='g'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.75' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix values='0 0 0 0 .08 0 0 0 0 .07 0 0 0 0 .06 0 0 0 1.1 -.2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23g)'/%3E%3C/svg%3E"),
+      repeating-linear-gradient(97deg, transparent 0 3px, rgb(var(--tinta) / 0.035) 3px 4px, transparent 4px 11px);
+    background-size: 220px 220px, auto;
+  }
+
+  /* Petunjuk ke browser untuk elemen yang dianimasikan GSAP */
+  .siap-gerak {
+    will-change: transform, opacity;
+    backface-visibility: hidden;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 4. prefers-reduced-motion                                           */
+/*    Struk muncul langsung, tidak ada kedip, tidak ada efek cetak.    */
+/*    GSAP/Framer Motion dicek terpisah lewat hook useReducedMotion.   */
+/* ------------------------------------------------------------------ */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+
+  .sisa-minus {
+    animation: none;
+    /* Kedip diganti penanda statis supaya "minus" tetap terbaca jelas */
+    text-decoration: underline;
+    text-decoration-thickness: 2px;
+    text-underline-offset: 4px;
+  }
+
+  .struk,
+  .animate-cetak {
+    clip-path: none !important;
+    transform: none !important;
+  }
+
+  .siap-gerak {
+    will-change: auto;
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/* 5. Mode hemat kuota                                                 */
+/*    <html data-hemat-kuota> dipasang dari hook useSaveData           */
+/*    (navigator.connection.saveData). 3D & tekstur berat dimatikan.   */
+/* ------------------------------------------------------------------ */
+[data-hemat-kuota] .tekstur-thermal {
+  background-image: none;
+}
+[data-hemat-kuota] .stempel {
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+[data-hemat-kuota] .grain {
+  display: none;
+}
+[data-hemat-kuota] [data-berat] {
+  display: none;
+}
