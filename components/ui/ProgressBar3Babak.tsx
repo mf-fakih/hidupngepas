@@ -34,7 +34,7 @@ export function ProgressBar3Babak() {
 
   return (
     // Latar kertas memudar ke bawah: konten yang di-scroll tidak bertumpuk dengan "Balik"
-    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 bg-gradient-to-b from-kertas from-75% to-kertas/0 pt-aman-atas">
+    <header className="pointer-events-none fixed inset-x-0 top-0 z-40 bg-gradient-to-b from-kertas from-45% via-kertas/75 via-70% to-kertas/0 pt-aman-atas">
       <div className="mx-auto w-full max-w-scene px-5 pb-2 pt-3 lg:max-w-[84rem] lg:px-12 lg:pt-5">
         {/* Kop halaman: hanya desktop */}
         <p aria-hidden className="mikro mb-2 hidden justify-between text-tinta lg:flex">

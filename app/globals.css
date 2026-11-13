@@ -28,6 +28,8 @@
     -webkit-text-size-adjust: 100%;
     -webkit-tap-highlight-color: transparent;
     /* scroll-behavior sengaja tidak diset: Lenis yang mengatur */
+    /* Elemen yang di-scroll/difokus tidak mendarat di bawah header fixed */
+    scroll-padding-top: calc(5rem + env(safe-area-inset-top, 0px));
   }
 
   /* Lenis (setara lenis/dist/lenis.css) */
