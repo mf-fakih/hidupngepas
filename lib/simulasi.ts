@@ -1065,6 +1065,47 @@ export function terapkanUndo(s: StateSwipe): StateSwipe {
 
 /* ---------- Navigasi scene ---------- */
 
+/** Jawaban tersimpan yang menentukan scene mana yang boleh dibuka lewat deep-link */
+export interface JawabanAlur {
+  status: Status | null;
+  cityId: CityId | null;
+  age: number;
+  income: number;
+  lifestyleIds: LifestyleId[];
+  swipedIds: LifestyleId[];
+  tornIds: LifestyleId[];
+  paylaterChoice: PaylaterChoice;
+}
+
+/**
+ * Deep-link ke scene yang datanya belum lengkap dialihkan ke langkah paling awal
+ * yang belum diisi:
+ *   status/kota kosong        → #profil
+ *   kartu belum habis di-swipe → #gaya-hidup
+ *   #cairkan saat sisa plus    → #struk (pop-up hanya muncul kalau minus)
+ *   #paylater / #nabung tanpa pilihan yang cocok → #struk
+ *   babak 3 saat minus tapi belum memilih paylater → #struk
+ */
+export function sceneYangBoleh(diminta: SceneId, s: JawabanAlur): SceneId {
+  if (diminta === 'hero' || diminta === 'kenalan') return diminta;
+  if (!s.status || !s.cityId) return 'kenalan';
+  if (diminta === 'gaji' || diminta === 'gaya-hidup') return diminta;
+  if (s.swipedIds.length < LIFESTYLE_ITEMS.length) return 'gaya-hidup';
+  if (diminta === 'struk') return diminta;
+
+  const minus = calcMonthly({ ...s, status: s.status, cityId: s.cityId }).isMinus;
+  switch (diminta) {
+    case 'cairkan':
+      return minus ? diminta : 'struk';
+    case 'paylater':
+      return minus && s.paylaterChoice === 'cairkan' ? diminta : 'struk';
+    case 'nabung':
+      return minus && s.paylaterChoice === 'tolak' ? diminta : 'struk';
+    default:
+      return minus && s.paylaterChoice === null ? 'struk' : diminta;
+  }
+}
+
 export interface KonteksNavigasi {
   isMinus: boolean;
   paylaterChoice: PaylaterChoice;

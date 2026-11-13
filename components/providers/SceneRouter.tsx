@@ -2,9 +2,9 @@
 
 import { useEffect } from 'react';
 import {
-  LIFESTYLE_ITEMS,
   SCENE_BY_ID,
   sceneFromHash,
+  sceneYangBoleh,
   useSimulationStore,
   type SceneId,
 } from '@/store/useSimulationStore';
@@ -17,19 +17,7 @@ import {
  *        back / forward → popstate → goTo(scene)  → deep-link /#gaya-hidup jalan
  */
 
-type Jawaban = Pick<
-  ReturnType<typeof useSimulationStore.getState>,
-  'status' | 'cityId' | 'swipedIds'
->;
-
-/** Deep-link ke scene yang datanya belum ada dialihkan ke langkah paling awal yang belum diisi */
-function sceneYangBoleh(diminta: SceneId, s: Jawaban): SceneId {
-  if (diminta === 'hero' || diminta === 'kenalan') return diminta;
-  if (!s.status || !s.cityId) return 'kenalan';
-  if (diminta === 'gaji' || diminta === 'gaya-hidup') return diminta;
-  if (s.swipedIds.length < LIFESTYLE_ITEMS.length) return 'gaya-hidup';
-  return diminta;
-}
+// Aturan deep-link ada di lib/simulasi.ts (sceneYangBoleh), supaya bisa dites.
 
 function tulisHash(scene: SceneId, ganti = false) {
   const hash = SCENE_BY_ID[scene].hash;

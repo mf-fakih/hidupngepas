@@ -3,6 +3,8 @@ import {
   LIFESTYLE_ITEMS,
   calcLifestyle,
   kartuBerikutnya,
+  sceneYangBoleh,
+  type JawabanAlur,
   terapkanSwipe,
   terapkanUndo,
   type StateSwipe,
@@ -68,5 +70,50 @@ describe('P0-2: swipe selalu berlaku untuk kartu yang tampil', () => {
     s = terapkanUndo(s);
     expect(kartuBerikutnya(s.swipedIds)).toBe('streaming');
     expect(s.lifestyleIds).toEqual(['kopi-susu']);
+  });
+});
+
+describe('P2-6: deep-link diarahkan ke langkah pertama yang belum lengkap', () => {
+  const semua = LIFESTYLE_ITEMS.map((i) => i.id);
+  const kosongAlur: JawabanAlur = {
+    status: null,
+    cityId: null,
+    age: 24,
+    income: 2_500_000,
+    lifestyleIds: [],
+    swipedIds: [],
+    tornIds: [],
+    paylaterChoice: null,
+  };
+  const minus: JawabanAlur = {
+    ...kosongAlur,
+    status: 'kerja',
+    cityId: 'jakarta',
+    lifestyleIds: ['kopi-susu', 'hp-baru'],
+    swipedIds: semua,
+  };
+  const plus: JawabanAlur = { ...minus, income: 9_000_000 };
+
+  it('tanpa state: semua scene tengah → #profil', () => {
+    for (const sc of ['cairkan', 'paylater', 'struk', 'timeline', 'kartu'] as const)
+      expect(sceneYangBoleh(sc, kosongAlur)).toBe('kenalan');
+  });
+  it('kartu belum habis → #gaya-hidup', () => {
+    expect(sceneYangBoleh('struk', { ...minus, swipedIds: semua.slice(0, 3) })).toBe('gaya-hidup');
+  });
+  it('#cairkan hanya kalau minus', () => {
+    expect(sceneYangBoleh('cairkan', minus)).toBe('cairkan');
+    expect(sceneYangBoleh('cairkan', plus)).toBe('struk');
+  });
+  it('#paylater / #nabung butuh pilihan yang cocok', () => {
+    expect(sceneYangBoleh('paylater', minus)).toBe('struk');
+    expect(sceneYangBoleh('paylater', { ...minus, paylaterChoice: 'cairkan' })).toBe('paylater');
+    expect(sceneYangBoleh('nabung', { ...minus, paylaterChoice: 'cairkan' })).toBe('struk');
+    expect(sceneYangBoleh('nabung', { ...minus, paylaterChoice: 'tolak' })).toBe('nabung');
+  });
+  it('babak 3 saat minus tanpa keputusan → #struk; plus → boleh', () => {
+    expect(sceneYangBoleh('kartu', minus)).toBe('struk');
+    expect(sceneYangBoleh('kartu', { ...minus, paylaterChoice: 'tolak' })).toBe('kartu');
+    expect(sceneYangBoleh('timeline', plus)).toBe('timeline');
   });
 });
