@@ -301,6 +301,60 @@ function hitungTitik(milestones: Milestone[], umurMulai: number, jarakMin: numbe
   return hasil;
 }
 
+type TabWhatIf = 'gaji' | 'jajan' | 'nabung';
+const TAB_WHAT_IF: { id: TabWhatIf; label: string }[] = [
+  { id: 'gaji', label: 'Gaji' },
+  { id: 'jajan', label: 'Jajan' },
+  { id: 'nabung', label: 'Nabung' },
+];
+
+/**
+ * HP: strip ringkasan milestone yang menempel di atas sheet what-if.
+ * Timeline-nya tertutup sheet, jadi payoff "milestone bergeser" ditampilkan di sini.
+ * Angka yang berubah dari kondisi awal dibalik warnanya (tinta), dan meluncur masuk.
+ */
+function StripMilestone({
+  milestones,
+  dasarById,
+}: {
+  milestones: Milestone[];
+  dasarById: Record<MilestoneId, number | null>;
+}) {
+  return (
+    <ol aria-label="Ringkasan milestone" className="flex gap-1.5 overflow-x-auto px-3 pb-1 pt-2">
+      {milestones.map((m) => {
+        const berubah = dasarById[m.id] !== m.umur;
+        return (
+          <motion.li
+            layout
+            key={m.id}
+            className={`flex shrink-0 items-center gap-1 rounded-chip border-2 border-tinta px-2 py-1 font-mono text-[0.8125rem] font-bold transition-colors ${
+              berubah ? 'bg-tinta text-kertas' : 'bg-kertas text-tinta'
+            }`}
+          >
+            <span aria-hidden>{IKON[m.id]}</span>
+            <span className="hanya-sr">{m.label}:</span>
+            <span className="relative inline-block overflow-hidden">
+              <AnimatePresence mode="popLayout" initial={false}>
+                <motion.span
+                  key={m.umur ?? 'x'}
+                  initial={{ y: '100%', opacity: 0 }}
+                  animate={{ y: 0, opacity: 1 }}
+                  exit={{ y: '-100%', opacity: 0 }}
+                  transition={{ type: 'spring', stiffness: 420, damping: 30 }}
+                  className="inline-block"
+                >
+                  {m.umur ?? '—'}
+                </motion.span>
+              </AnimatePresence>
+            </span>
+          </motion.li>
+        );
+      })}
+    </ol>
+  );
+}
+
 /** Desktop: sisakan 7% di kiri & kanan supaya kartu di ujung sumbu tidak terpotong */
 const sumbuX = (p: number) => `${7 + p * 86}%`;
 
@@ -317,6 +371,8 @@ export function Scene06Timeline() {
 
   const desktop = useMediaQuery('(min-width: 768px)');
   const [drawerBuka, setDrawerBuka] = useState(false);
+  /** HP: satu slider aktif per tab supaya sheet tetap pendek (≤ 40% layar) */
+  const [tab, setTab] = useState<TabWhatIf>('gaji');
   useEffect(() => setDrawerBuka(desktop), [desktop]);
 
   const wadahTrek = useRef<HTMLDivElement>(null);
@@ -382,6 +438,11 @@ export function Scene06Timeline() {
   const adaJajan = input.lifestyleIds.length > 0;
   const sisaKalau = kalau.nabungPerBulan;
   const catatanSisa = kalimatSisaPlus(input.age, kalau.umurSisaPlus);
+  // HP: hanya tab aktif yang tampil. Desktop: ketiganya berjajar.
+  const panelTab = (id: TabWhatIf) =>
+    desktop
+      ? {}
+      : { role: 'tabpanel', id: `isi-${id}`, 'aria-labelledby': `tab-${id}`, hidden: tab !== id };
 
   // Tanda umur tiap 5 tahun
   const tanda: number[] = [];
@@ -557,8 +618,30 @@ export function Scene06Timeline() {
                 transition={{ type: 'spring', stiffness: 320, damping: 32 }}
                 className="overflow-hidden"
               >
-                <div className="grid gap-1 px-4 pb-2 md:grid-cols-3 md:gap-5">
-                  <div>
+                <div className="max-h-[40dvh] overflow-y-auto md:max-h-none">
+                {!desktop && (
+                  <>
+                    <StripMilestone milestones={kalau.milestones} dasarById={dasarById} />
+                    <div role="tablist" aria-label="Pilih skenario" className="mx-3 mt-1 grid grid-cols-3 rounded-chip border-2 border-tinta p-0.5">
+                      {TAB_WHAT_IF.map((t) => (
+                        <button
+                          key={t.id}
+                          type="button"
+                          role="tab"
+                          id={`tab-${t.id}`}
+                          aria-selected={tab === t.id}
+                          aria-controls={`isi-${t.id}`}
+                          onClick={() => setTab(t.id)}
+                          className="min-h-sentuh rounded-chip font-display text-sm font-bold text-tinta aria-selected:bg-tinta aria-selected:text-kertas"
+                        >
+                          {t.label}
+                        </button>
+                      ))}
+                    </div>
+                  </>
+                )}
+                <div className="grid gap-1 px-4 pb-2 pt-2 md:grid-cols-3 md:gap-5 md:pt-0">
+                  <div {...panelTab('gaji')}>
                     <p className="flex justify-between font-display text-sm font-medium text-tinta">
                       <span>Kalau gaji naik</span>
                       <span className="font-mono font-bold">{whatIf.raisePct}%</span>
@@ -573,7 +656,7 @@ export function Scene06Timeline() {
                       onChange={(v) => ubahWhatIf({ raisePct: v })}
                     />
                   </div>
-                  <div>
+                  <div {...panelTab('jajan')}>
                     <p className="flex justify-between font-display text-sm font-medium text-tinta">
                       <span>Kalau kopi susu / jajan dikurangi</span>
                       <span className="font-mono font-bold">{whatIf.jajanHematPct > 0 ? `−${whatIf.jajanHematPct}` : 0}%</span>
@@ -592,7 +675,7 @@ export function Scene06Timeline() {
                       <p className="pb-4 pt-2 text-sm text-tinta-pudar">Lo nggak swipe gaya hidup apa-apa. Udah hemat.</p>
                     )}
                   </div>
-                  <div>
+                  <div {...panelTab('nabung')}>
                     <p className="flex justify-between font-display text-sm font-medium text-tinta">
                       <span>Kalau mulai nabung rutin</span>
                       <span className="font-mono font-bold">
@@ -625,6 +708,7 @@ export function Scene06Timeline() {
                     </>
                   )}
                 </p>
+                </div>
               </motion.div>
             )}
           </AnimatePresence>
