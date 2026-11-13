@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { ChipSelector, type OpsiChip } from '@/components/ui/ChipSelector';
 import { IkonGaris } from '@/components/ui/IkonGaris';
 import { MejaKasir } from '@/components/ui/MejaKasir';
+import { PETA_INDONESIA_D, PETA_VIEWBOX, proyeksiPeta } from '@/lib/peta-indonesia';
 import {
   ASUMSI,
   CITIES,
@@ -24,56 +25,36 @@ const OPSI_STATUS: OpsiChip<Status>[] = STATUS_LIST.map((s) => ({
 
 /* ------------------------------------------------------------------ */
 /* Peta Indonesia minimalis                                            */
-/* Bentuk pulau disederhanakan (bukan peta presisi). Titik kota        */
-/* dihitung dari lintang/bujur: x = (bujur − 95) / 46 × 400,           */
-/* y = (6 − lintang) / 17 × 150.                                       */
+/* Garis pantai dari Natural Earth 1:50m (domain publik), disederhana- */
+/* kan; lihat lib/peta-indonesia.ts. Titik kota diproyeksikan dari     */
+/* lintang/bujur aslinya dengan proyeksi yang sama.                    */
 /* ------------------------------------------------------------------ */
 
-const PULAU = [
-  // Sumatra
-  'M3 5 12 3 35 18 55 38 75 62 92 82 96 103 88 104 70 88 50 66 30 44 12 24Z',
-  // Jawa
-  'M90 108 105 106 125 111 150 113 168 118 170 126 150 125 125 122 100 118 90 114Z',
-  // Kalimantan
-  'M124 58 128 40 145 30 165 14 185 12 200 22 207 42 196 60 190 80 172 88 152 84 136 80 126 70Z',
-  // Sulawesi
-  'M212 70 218 48 236 40 262 40 260 47 238 50 228 58 246 62 252 70 238 70 240 84 248 96 240 98 230 82 224 84 222 100 212 102 214 84Z',
-  // Papua
-  'M313 62 328 58 340 66 352 60 372 62 398 70 398 128 380 118 362 104 345 92 330 82 318 74Z',
-  // Bali – Nusa Tenggara
-  'M173 125h6v4h-6Z',
-  'M181 126h6v4h-6Z',
-  'M190 126h16v4h-16Z',
-  'M213 127h24v4h-24Z',
-  'M244 134 262 128 264 132 247 139Z',
-  // Maluku
-  'M283 40 288 38 290 54 285 56Z',
-  'M282 82h18v5h-18Z',
-];
-
-const TITIK: Record<Exclude<CityId, 'lainnya'>, { x: number; y: number }> = {
-  medan: { x: 32, y: 21 },
-  'bandar-lampung': { x: 89, y: 101 },
-  jakarta: { x: 103, y: 108 },
-  bandung: { x: 110, y: 114 },
-  yogyakarta: { x: 134, y: 122 },
-  surabaya: { x: 154, y: 117 },
-  makassar: { x: 212, y: 98 },
+const KOORDINAT_KOTA: Record<Exclude<CityId, 'lainnya'>, [lintang: number, bujur: number]> = {
+  medan: [3.595, 98.672],
+  'bandar-lampung': [-5.429, 105.261],
+  jakarta: [-6.209, 106.846],
+  bandung: [-6.918, 107.619],
+  yogyakarta: [-7.796, 110.37],
+  surabaya: [-7.258, 112.752],
+  makassar: [-5.148, 119.433],
 };
+
+const TITIK = Object.fromEntries(
+  Object.entries(KOORDINAT_KOTA).map(([id, [lintang, bujur]]) => [id, proyeksiPeta(lintang, bujur)]),
+) as Record<Exclude<CityId, 'lainnya'>, { x: number; y: number }>;
 
 function PetaIndonesia({ cityId }: { cityId: CityId | null }) {
   const sorot = cityId && cityId !== 'lainnya' ? TITIK[cityId] : null;
   const semuaMenyala = cityId === 'lainnya';
 
   return (
-    <svg viewBox="0 0 400 150" aria-hidden className="h-auto w-full">
+    <svg viewBox={PETA_VIEWBOX} aria-hidden className="h-auto w-full">
       <g
         fill="rgb(var(--tinta))"
         style={{ opacity: semuaMenyala ? 0.26 : 0.1, transition: 'opacity 300ms ease' }}
       >
-        {PULAU.map((d) => (
-          <path key={d} d={d} />
-        ))}
+        <path d={PETA_INDONESIA_D} />
       </g>
 
       {Object.entries(TITIK).map(([id, t]) => (
@@ -248,7 +229,7 @@ export function Scene02Profile() {
           Lampiran A — Peta biaya kos
         </p>
         <PetaIndonesia cityId={cityId} />
-        <div aria-live="polite" className="-mt-2 flex min-h-[2.75rem] justify-end">
+        <div aria-live="polite" className="mt-1 flex min-h-[2.75rem] justify-end">
           <AnimatePresence mode="wait">
             {kota && (
               <motion.p
