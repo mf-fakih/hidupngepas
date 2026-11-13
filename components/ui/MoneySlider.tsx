@@ -1,6 +1,6 @@
 'use client';
 
-import { useRef, type CSSProperties } from 'react';
+import { useRef, type CSSProperties, type KeyboardEvent } from 'react';
 import { getar } from '@/lib/sound';
 import { formatRupiah } from '@/store/useSimulationStore';
 
@@ -42,6 +42,8 @@ export function MoneySlider({
   const kelipatanTerakhir = useRef(getarTiap ? Math.floor(value / getarTiap) : 0);
 
   const pecahan = max > min ? (Math.min(Math.max(value, min), max) - min) / (max - min) : 0;
+  const jepit = (n: number) => Math.min(max, Math.max(min, n));
+  const bulatStep = (n: number) => jepit(Math.round((n - min) / step) * step + min);
 
   const ubah = (baru: number) => {
     if (getarTiap) {
@@ -54,6 +56,32 @@ export function MoneySlider({
     onChange(baru);
   };
 
+  // step="any" supaya thumb tepat di nilai hasil ketikan (mis. 2.720.000, bukan 2.700.000).
+  // Akibatnya keyboard harus diurus sendiri: panah = 1 step, PageUp/PageDown = 10 step.
+  const onKeyDown = (e: KeyboardEvent<HTMLInputElement>) => {
+    const lompat: Record<string, number> = {
+      ArrowRight: step,
+      ArrowUp: step,
+      ArrowLeft: -step,
+      ArrowDown: -step,
+      PageUp: step * 10,
+      PageDown: -step * 10,
+    };
+    if (e.key in lompat) {
+      e.preventDefault();
+      const d = lompat[e.key];
+      const diGrid = (value - min) % step === 0;
+      // Nilai hasil ketikan (di luar kelipatan step): langkah pertama mendarat di kelipatan terdekat searah tombol
+      const baru = diGrid
+        ? value + d
+        : (d > 0 ? Math.ceil((value - min) / step) : Math.floor((value - min) / step)) * step + min;
+      ubah(jepit(baru));
+    } else if (e.key === 'Home' || e.key === 'End') {
+      e.preventDefault();
+      ubah(e.key === 'Home' ? min : max);
+    }
+  };
+
   return (
     <div className="relative pb-9" data-kursor="ATUR">
       <input
@@ -64,9 +92,11 @@ export function MoneySlider({
         aria-valuetext={format(value)}
         min={min}
         max={max}
-        step={step}
+        step="any"
         value={value}
-        onChange={(e) => ubah(Number(e.target.value))}
+        // Geser dengan jari/mouse: dibulatkan ke kelipatan step
+        onChange={(e) => ubah(bulatStep(Number(e.target.value)))}
+        onKeyDown={onKeyDown}
         style={{ '--isi': posisi(pecahan) } as CSSProperties}
       />
 
@@ -87,8 +117,7 @@ export function MoneySlider({
         aria-hidden
         className="absolute inset-x-0 bottom-0 flex justify-between font-mono text-[0.6875rem] text-tinta-pudar"
       >
-        {/* Label ujung digeser ke bawah penanda supaya tidak tabrakan */}
-        <span className={penanda ? 'invisible' : ''}>{format(min)}</span>
+        <span>{format(min)}</span>
         <span>{format(max)}</span>
       </div>
     </div>

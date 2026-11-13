@@ -1,6 +1,6 @@
 'use client';
 
-import { AnimatePresence, motion } from 'framer-motion';
+import { motion } from 'framer-motion';
 import { useEffect, useRef } from 'react';
 import { MejaKasir } from '@/components/ui/MejaKasir';
 import { MoneySlider } from '@/components/ui/MoneySlider';
@@ -63,14 +63,13 @@ export function Scene03Income() {
         <label htmlFor="input-gaji">{label}</label>
       </h2>
 
-      {/* Ilustrasi mode: berubah seketika mengikuti angka */}
+      {/* Ilustrasi mode: berganti SEKETIKA mengikuti angka (tanpa menunggu animasi keluar),
+          jadi saat diketik cepat badge & ilustrasi tidak pernah hilang */}
       <div aria-live="polite" className="mt-6 flex min-h-[7.5rem] flex-col items-center lg:mt-10 lg:min-h-[4.5rem] lg:items-start">
-        <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={mode.id}
-            initial={{ opacity: 0, scale: 0.7, rotate: -8 }}
+            initial={{ opacity: 0.4, scale: 0.85, rotate: -6 }}
             animate={{ opacity: 1, scale: 1, rotate: 0 }}
-            exit={{ opacity: 0, scale: 0.85 }}
             transition={{ type: 'spring', stiffness: 420, damping: 18 }}
             className="flex flex-col items-center text-center lg:flex-row lg:gap-4 lg:text-left"
           >
@@ -82,7 +81,6 @@ export function Scene03Income() {
             </span>
             <span className="mt-2 text-sm text-tinta-pudar lg:mt-0 lg:text-base">{tampilan.catatan}</span>
           </motion.div>
-        </AnimatePresence>
       </div>
 
       {/* Input angka manual */}
