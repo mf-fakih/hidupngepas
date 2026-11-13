@@ -8,24 +8,34 @@ Semua dihitung di browser. Satu-satunya yang keluar: angka ringkas kartu hasil k
 ```bash
 npm run dev        # dev server
 npm run typecheck  # tsc --noEmit, wajib bersih sebelum commit
+npm test           # Vitest: konsistensi angka antar scene, swipe, deep-link
 npm run build
 ```
 
+Belum ada ESLint di repo; `next build` hanya mengecek tipe.
+
 ## Struktur
 
-- `lib/simulasi.ts` — modul MURNI (tanpa `'use client'`): tipe, `ASUMSI`, dataset (kota, gaya hidup, persona, scene, `STATISTIK`), dan semua rumus. Aman diimpor dari server.
+- `lib/simulasi.ts` — modul MURNI (tanpa `'use client'`): tipe, `ASUMSI`, dataset (kota, gaya hidup, persona, scene, `STATISTIK`), dan semua rumus. Aman diimpor dari server dan di-unit-test (`tests/`).
+  - **`hitungSimulasi(input, whatIf?)` = satu-satunya pintu hitung.** Struk, jalur 05b/05c, timeline, kartu, dan template anggaran memakai hasilnya (hook `useSimulasi()`). Jangan menghitung ulang angka di komponen.
+  - Kartu hasil & persona dihitung dari struk FINAL (setelah sobekan) + proyeksi dasar (tanpa what-if), jadi sama dengan timeline.
+  - Logika yang bisa dites juga tinggal di sini: `terapkanSwipe/terapkanUndo` (swipe hanya berlaku untuk kartu yang tampil), `sceneYangBoleh` (aturan deep-link), `slipSetoran`, `bebanPaylater`, `urlKartu` (URL /api/og yang sama untuk prefetch & tampilan).
 - `store/useSimulationStore.ts` — store Zustand + hook turunan (`useMonthly()`, `useProjection()`, ...). Me-re-export seluruh `lib/simulasi.ts`, jadi komponen cukup impor dari store. **Kode server (route) wajib impor dari `lib/simulasi.ts`**: impor dari modul `'use client'` di server hanya menghasilkan referensi klien.
-- `app/api/og/route.tsx` — kartu hasil 9:16 (1080×1920) via `next/og` (Satori/@vercel/og bawaan Next), edge runtime. Font diambil dari Google Fonts; gagal → font bawaan.
+- `app/api/og/route.tsx` — kartu hasil 9:16 (1080×1920) via `next/og`, edge runtime. Di-prefetch dari scene 07.
+- `app/opengraph-image.tsx`, `app/hasil/[persona]/` — gambar OG 1200×630 bertema struk (`lib/og-struk.tsx`) dan halaman share per persona (tanpa nominal). Metadata OG/Twitter di `app/layout.tsx` (`metadataBase` dari `NEXT_PUBLIC_SITE_URL`).
+- `lib/og-font.ts` — font semua gambar `next/og` dibundel dari `@fontsource` (.woff; Satori belum dukung woff2). Jangan kembali ke Google Fonts: build Vercel pernah gagal karenanya. Gambar `next/og` pakai `runtime = 'edge'` (literal, bukan re-export): runtime Node bermasalah di path Windows berspasi.
 - `components/providers/SceneRouter.tsx` — rehidrasi localStorage + sinkron scene ↔ hash URL.
 - `components/providers/SmoothScroll.tsx` — Lenis + ScrollTrigger dalam satu ticker GSAP, plus deteksi hemat kuota. `lib/lenis.ts` menyimpan instance-nya (`scrollKeAtas`, `kunciScroll`).
 - `components/providers/MagneticCTA.tsx` — efek magnet semua `.tombol-cta` lewat event delegation (desktop saja).
 - `components/scenes/SceneNN*.tsx` — satu file per scene.
-- `components/ui/` — komponen yang dipakai ulang (RollingNumber, ChipSelector, MoneySlider, ProgressBar3Babak, ReceiptPrinter, KineticMarquee).
+- `components/ui/` — komponen yang dipakai ulang (RollingNumber, ChipSelector, MoneySlider, ProgressBar3Babak, ReceiptPrinter, KineticMarquee, IkonGaris).
 - `lib/sound.ts` — bunyi ka-ching (Web Audio, tanpa file) dan getar.
 
 ## Keputusan desain (jangan diubah tanpa diskusi)
 
 - **Satu scene tampil per waktu.** Scene aktif ada di Zustand (`scene`), disinkronkan dua arah dengan hash URL oleh `SceneRouter` (pushState saat maju, popstate saat back browser). Deep-link ke scene yang datanya belum lengkap dialihkan ke langkah paling awal yang belum diisi.
+- **Yang disimpan ke localStorage** (`partialize`): jawaban user termasuk `tornIds` (sobekan struk) dan preferensi. `whatIf` sengaja tidak. Mengubah sobekan, gaji, status, atau kota mengosongkan `paylaterChoice`.
+- **Transisi scene = crossfade** (`AnimatePresence mode="popLayout"` di `page.tsx`), bukan "wait": tidak boleh ada layar kosong di antara scene. `<main>` hanya `relative`, tanpa z-index.
 - **Store pakai `skipHydration`.** localStorage hanya dibaca setelah mount (di SceneRouter) supaya HTML server = client. UI yang bergantung pada data tersimpan dijaga dengan `hasHydrated`.
 - **Dataset kota dan harga gaya hidup masih PLACEHOLDER**, bukan data BPS/UMK. Bentuk datanya sudah final; ganti angkanya saja sebelum rilis.
 - **Semua asumsi proyeksi ada di objek `ASUMSI`** di store. Ubah angka di sana, bukan di rumus.
@@ -49,7 +59,9 @@ npm run build
 - **GSAP pin di dalam `.scene`** (flex): selalu set `pinSpacing: true`, kalau tidak GSAP mematikannya otomatis dan tidak ada ruang scroll.
 - **Grafik bermakna** (DotGrid, dsb.) butuh kontras ≥ 3:1 dengan kertas: jangan pakai `neon` sebagai warna isi grafik.
 - **Angka statistik scene 07, tautan OJK, dan nomor layanan konseling** belum dicek ulang ke sumber resmi (lihat komentar ⚠️ di kode). Wajib diverifikasi sebelum rilis.
-- **Emoji:** hindari emoji Unicode 13+ (contoh 🧋), karena tampil sebagai kotak kosong di Windows 10.
+- **Emoji:** hindari emoji Unicode 13+ (contoh 🧋), karena tampil sebagai kotak kosong di Windows 10. Chip status & kartu gaya hidup sudah memakai `IkonGaris`; ikon baru sebaiknya ditambahkan ke sana.
+- **Periode sumber statistik tidak boleh ditebak.** `STATISTIK[].periode` = null sampai dicek ke rilis resmi; UI menulis "periode belum diverifikasi".
+- **Timeline sampai umur 70** (= rentang hitungan). Kalau sisa sekarang belum plus, ada milestone 0 "Sisa mulai plus" (`umurSisaPlus`) dan satu kalimat soal asumsi kenaikan gaji.
 
 ## Konvensi
 
