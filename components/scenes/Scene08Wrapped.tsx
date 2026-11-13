@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { getar } from '@/lib/sound';
-import { useMonthly, useResult, useSimulationStore } from '@/store/useSimulationStore';
+import { useResult, useSimulationStore } from '@/store/useSimulationStore';
 
 const NAMA_FILE = 'hidup-ngepas.png';
 
@@ -119,7 +119,6 @@ function KartuHolo({ src, alt }: { src: string; alt: string }) {
 
 export function Scene08Wrapped() {
   const hasil = useResult();
-  const bulanan = useMonthly();
   const tampilkanNominal = useSimulationStore((s) => s.showAmountOnCard);
   const toggleShowAmount = useSimulationStore((s) => s.toggleShowAmount);
   const markCompleted = useSimulationStore((s) => s.markCompleted);
@@ -135,10 +134,10 @@ export function Scene08Wrapped() {
 
   // Hanya angka ringkas yang dikirim ke /api/og. Nominal rupiah HANYA kalau toggle nyala.
   const src = useMemo(() => {
-    if (!hasil || !bulanan) return null;
+    if (!hasil) return null;
     const q = new URLSearchParams({
       p: hasil.persona.id,
-      sp: String(bulanan.income > 0 ? Math.round((hasil.sisa / bulanan.income) * 100) : hasil.sisa < 0 ? -100 : 0),
+      sp: String(hasil.sisaPct),
       u: hasil.umurDpRumah === null ? '' : String(hasil.umurDpRumah),
       g: String(hasil.lifestylePct),
       h: hasil.modeHard ? '1' : '0',
@@ -146,10 +145,10 @@ export function Scene08Wrapped() {
     });
     if (tampilkanNominal) {
       q.set('s', String(hasil.sisa));
-      q.set('i', String(bulanan.income));
+      q.set('i', String(hasil.income));
     }
     return `/api/og?${q.toString()}`;
-  }, [hasil, bulanan, tampilkanNominal]);
+  }, [hasil, tampilkanNominal]);
 
   if (!hasil || !src) return null;
 
@@ -220,7 +219,7 @@ export function Scene08Wrapped() {
             <span className="kode">HSL-02</span>
             <span>SISA / BULAN</span>
             <span className={`nilai ${hasil.sisa < 0 ? 'text-minus-teks' : ''}`}>
-              {bulanan && bulanan.income > 0 ? `${Math.round((hasil.sisa / bulanan.income) * 100)}%` : '—'}
+              {hasil.income > 0 ? `${hasil.sisaPct}%` : '—'}
             </span>
           </div>
           <div className="ledger">

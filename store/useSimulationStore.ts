@@ -22,14 +22,16 @@ import {
   SCENE_BY_ID,
   STATUS,
   WHAT_IF_AWAL,
-  buildResult,
   calcLifestyle,
   calcMonthly,
   calcPaylater,
   compareWhatIf,
   getNextScene,
   getPrevScene,
+  hitungSimulasi,
   jepit,
+  terapkanSwipe,
+  terapkanUndo,
   type CityId,
   type HasilKartu,
   type KonteksNavigasi,
@@ -167,33 +169,20 @@ export const useSimulationStore = create<SimulationStore>()(
           paylaterChoice: null,
         }),
 
-      swipe: (id, arah) =>
-        set((s) => {
-          if (s.swipedIds.includes(id)) return s;
-          return {
-            swipedIds: [...s.swipedIds, id],
-            lifestyleIds: arah === 'kanan' ? [...s.lifestyleIds, id] : s.lifestyleIds,
-          };
-        }),
+      swipe: (id, arah) => set((s) => terapkanSwipe(s, id, arah)),
 
-      undoSwipe: () =>
-        set((s) => {
-          const terakhir = s.swipedIds[s.swipedIds.length - 1];
-          if (!terakhir) return s;
-          return {
-            swipedIds: s.swipedIds.slice(0, -1),
-            lifestyleIds: s.lifestyleIds.filter((id) => id !== terakhir),
-          };
-        }),
+      undoSwipe: () => set((s) => terapkanUndo(s)),
 
+      // Struk berubah → SISA berubah → keputusan paylater lama tidak berlaku lagi
       toggleTorn: (id) =>
         set((s) => ({
           tornIds: s.tornIds.includes(id)
             ? s.tornIds.filter((t) => t !== id)
             : [...s.tornIds, id],
+          paylaterChoice: null,
         })),
 
-      resetTorn: () => set({ tornIds: [] }),
+      resetTorn: () => set({ tornIds: [], paylaterChoice: null }),
 
       choosePaylater: (choice) => set({ paylaterChoice: choice }),
 
@@ -234,8 +223,8 @@ export const useSimulationStore = create<SimulationStore>()(
       version: 1,
       storage: createJSONStorage(() => localStorage),
 
-      // Hanya jawaban user & preferensi yang disimpan. Scene aktif mengikuti hash URL,
-      // sobekan dan what-if sengaja mulai bersih tiap kunjungan.
+      // Jawaban user (termasuk sobekan struk) & preferensi. Scene aktif mengikuti hash URL,
+      // what-if sengaja mulai bersih tiap kunjungan.
       partialize: (s) => ({
         status: s.status,
         cityId: s.cityId,
@@ -243,6 +232,7 @@ export const useSimulationStore = create<SimulationStore>()(
         income: s.income,
         lifestyleIds: s.lifestyleIds,
         swipedIds: s.swipedIds,
+        tornIds: s.tornIds,
         paylaterChoice: s.paylaterChoice,
         soundOn: s.soundOn,
         showAmountOnCard: s.showAmountOnCard,
@@ -298,10 +288,15 @@ export function useSimulationInput(): SimulationInput | null {
   );
 }
 
+/** Hasil simulasi tanpa what-if: sumber angka struk, jalur 05b/05c, kartu, dan anggaran */
+export function useSimulasi() {
+  const input = useSimulationInput();
+  return useMemo(() => (input ? hitungSimulasi(input) : null), [input]);
+}
+
 /** Struk scene 05: baris, total, SISA (ikut berubah saat baris disobek) */
 export function useMonthly(): Monthly | null {
-  const input = useSimulationInput();
-  return useMemo(() => (input ? calcMonthly(input) : null), [input]);
+  return useSimulasi()?.bulanan ?? null;
 }
 
 /** Total gaya hidup berjalan untuk rolling number di scene 04 */
@@ -325,8 +320,7 @@ export function useProjection() {
 
 /** Kartu hasil scene 08 */
 export function useResult(): HasilKartu | null {
-  const input = useSimulationInput();
-  return useMemo(() => (input ? buildResult(input) : null), [input]);
+  return useSimulasi()?.kartu ?? null;
 }
 
 /** Segmen progress bar yang aktif (1–3) */

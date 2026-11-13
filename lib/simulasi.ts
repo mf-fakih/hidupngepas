@@ -863,10 +863,11 @@ export function compareWhatIf(input: SimulationInput, whatIf: WhatIf) {
  *   5. Minus                                             → Tim Tanggal Tua
  *   6. Sisanya (plus tipis)                              → Si Paling Ngepas
  *
- * Dihitung dari kondisi asli: sobekan struk dan what-if tidak mengubah persona.
+ * Dihitung dari struk FINAL (setelah sobekan), sama dengan angka di kartu.
+ * What-if di timeline tidak mengubah persona.
  */
 export function determinePersona(input: SimulationInput): Persona {
-  const b = calcMonthly({ ...input, tornIds: [] });
+  const b = calcMonthly(input);
 
   if (input.paylaterChoice === 'cairkan') return PERSONAS['sultan-paylater'];
   if (input.status === 'cari-kerja') return PERSONAS['pejuang-lamaran'];
@@ -878,8 +879,12 @@ export function determinePersona(input: SimulationInput): Persona {
 
 export interface HasilKartu {
   persona: Persona;
+  /** Penghasilan per bulan (untuk nominal opsional di kartu) */
+  income: number;
   /** 3 angka kunci kartu hasil */
   sisa: number;
+  /** Sisa dalam % penghasilan (negatif = minus) */
+  sisaPct: number;
   umurDpRumah: number | null;
   lifestylePct: number;
   kprDitolak: boolean;
@@ -887,17 +892,90 @@ export interface HasilKartu {
   modeHard: boolean;
 }
 
+/**
+ * Kartu hasil = struk FINAL (setelah sobekan) + proyeksi dasar (tanpa what-if).
+ * Angkanya identik dengan struk scene 05 dan proyeksi dasar timeline scene 06.
+ */
 export function buildResult(input: SimulationInput): HasilKartu {
-  const asli = { ...input, tornIds: [] };
-  const bulanan = calcMonthly(asli);
-  const proyeksi = projectLife(asli);
+  return hitungSimulasi(input).kartu;
+}
+
+/* ---------- Sumber kebenaran tunggal ---------- */
+
+export interface HasilSimulasi {
+  bulanan: Monthly;
+  /** null kalau user tidak mencairkan paylater */
+  paylater: Paylater | null;
+  /** Proyeksi dengan what-if (sama dengan dasar kalau what-if kosong) */
+  proyeksi: Projection;
+  /** Proyeksi tanpa what-if: dipakai kartu hasil */
+  proyeksiDasar: Projection;
+  kartu: HasilKartu;
+}
+
+/**
+ * SATU-SATUNYA pintu hitung. Struk, jalur paylater/nabung, timeline, kartu,
+ * dan template anggaran mengambil angka dari sini, jadi input yang sama
+ * selalu menghasilkan angka yang sama di semua scene.
+ */
+export function hitungSimulasi(input: SimulationInput, whatIf: WhatIf = WHAT_IF_AWAL): HasilSimulasi {
+  const bulanan = calcMonthly(input);
+  const paylater = input.paylaterChoice === 'cairkan' ? calcPaylater(bulanan.sisa) : null;
+  const proyeksiDasar = projectLife(input, WHAT_IF_AWAL);
+  const proyeksi = whatIf === WHAT_IF_AWAL ? proyeksiDasar : projectLife(input, whatIf);
+
   return {
-    persona: determinePersona(asli),
-    sisa: bulanan.sisa,
-    umurDpRumah: proyeksi.umurDpRumah,
-    lifestylePct: bulanan.lifestylePct,
-    kprDitolak: proyeksi.kprDitolak,
-    modeHard: input.lifestyleIds.length === LIFESTYLE_ITEMS.length,
+    bulanan,
+    paylater,
+    proyeksi,
+    proyeksiDasar,
+    kartu: {
+      persona: determinePersona(input),
+      income: bulanan.income,
+      sisa: bulanan.sisa,
+      sisaPct: bulanan.sisaPct,
+      umurDpRumah: proyeksiDasar.umurDpRumah,
+      lifestylePct: bulanan.lifestylePct,
+      kprDitolak: proyeksiDasar.kprDitolak,
+      modeHard: input.lifestyleIds.length === LIFESTYLE_ITEMS.length,
+    },
+  };
+}
+
+/* ---------- Swipe kartu gaya hidup (scene 04) ---------- */
+
+export interface StateSwipe {
+  swipedIds: LifestyleId[];
+  lifestyleIds: LifestyleId[];
+  tornIds: LifestyleId[];
+}
+
+/** Kartu yang sedang tampil paling atas: item pertama yang belum di-swipe */
+export function kartuBerikutnya(swipedIds: LifestyleId[]): LifestyleId | null {
+  return LIFESTYLE_ITEMS.find((item) => !swipedIds.includes(item.id))?.id ?? null;
+}
+
+/**
+ * Swipe hanya berlaku untuk kartu yang sedang tampil. Aksi yang datang terlambat
+ * (klik beruntun, animasi lama selesai setelah undo) untuk kartu lain diabaikan.
+ */
+export function terapkanSwipe(s: StateSwipe, id: LifestyleId, arah: 'kanan' | 'kiri'): StateSwipe {
+  if (id !== kartuBerikutnya(s.swipedIds)) return s;
+  return {
+    swipedIds: [...s.swipedIds, id],
+    lifestyleIds: arah === 'kanan' ? [...s.lifestyleIds, id] : s.lifestyleIds,
+    tornIds: s.tornIds,
+  };
+}
+
+/** Balikin kartu terakhir: keluar dari swipe, gaya hidup, dan sobekan sekaligus */
+export function terapkanUndo(s: StateSwipe): StateSwipe {
+  const terakhir = s.swipedIds[s.swipedIds.length - 1];
+  if (!terakhir) return s;
+  return {
+    swipedIds: s.swipedIds.slice(0, -1),
+    lifestyleIds: s.lifestyleIds.filter((id) => id !== terakhir),
+    tornIds: s.tornIds.filter((id) => id !== terakhir),
   };
 }
 
