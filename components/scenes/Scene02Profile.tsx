@@ -3,6 +3,7 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useMemo, useState } from 'react';
 import { ChipSelector, type OpsiChip } from '@/components/ui/ChipSelector';
+import { IkonGaris } from '@/components/ui/IkonGaris';
 import { MejaKasir } from '@/components/ui/MejaKasir';
 import {
   ASUMSI,
@@ -15,17 +16,10 @@ import {
   type Status,
 } from '@/store/useSimulationStore';
 
-const EMOJI_STATUS: Record<Status, string> = {
-  sekolah: '🎒',
-  kuliah: '🎓',
-  kerja: '💼',
-  'cari-kerja': '📨',
-};
-
 const OPSI_STATUS: OpsiChip<Status>[] = STATUS_LIST.map((s) => ({
   id: s.id,
   label: s.label,
-  emoji: EMOJI_STATUS[s.id],
+  ikon: <IkonGaris nama={s.id} className="h-6 w-6 shrink-0" />,
 }));
 
 /* ------------------------------------------------------------------ */

@@ -10,6 +10,7 @@ import {
   useTransform,
 } from 'framer-motion';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { IkonGaris } from '@/components/ui/IkonGaris';
 import { MejaKasir } from '@/components/ui/MejaKasir';
 import { RollingNumber } from '@/components/ui/RollingNumber';
 import { getar, playKaChing } from '@/lib/sound';
@@ -38,9 +39,7 @@ const AMBANG = 96;
 function IsiKartu({ item }: { item: LifestyleItem }) {
   return (
     <div className="flex h-full flex-col justify-between p-5">
-      <span aria-hidden className="text-7xl leading-none">
-        {item.emoji}
-      </span>
+      <IkonGaris nama={item.id} className="h-16 w-16 text-tinta" />
       <div>
         <h3 className="text-3xl font-bold leading-tight text-tinta">{item.label}</h3>
         <p className="mt-2 font-mono text-struk text-tinta-pudar">{item.rincian}</p>

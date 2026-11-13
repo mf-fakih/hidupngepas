@@ -1,11 +1,13 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { useRef, type KeyboardEvent } from 'react';
+import { useRef, type KeyboardEvent, type ReactNode } from 'react';
 
 export interface OpsiChip<T extends string> {
   id: T;
   label: string;
+  /** Ikon garis (diutamakan); emoji hanya cadangan */
+  ikon?: ReactNode;
   emoji?: string;
 }
 
@@ -76,7 +78,7 @@ export function ChipSelector<T extends string>({
               terpilih ? 'bg-tinta text-kertas' : 'bg-kertas text-tinta',
             ].join(' ')}
           >
-            {o.emoji && <span aria-hidden>{o.emoji}</span>}
+            {o.ikon ?? (o.emoji && <span aria-hidden>{o.emoji}</span>)}
             {o.label}
           </motion.button>
         );
