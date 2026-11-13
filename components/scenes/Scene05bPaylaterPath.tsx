@@ -285,7 +285,7 @@ export function Scene05bPaylaterPath() {
 
       <div className="kolom-kanan">
 
-      <div className="relative mt-4 lg:mb-16 lg:mt-12">
+      <div className={`relative mt-4 lg:mt-12 ${fase === 'jalan' ? '' : 'mb-24 lg:mb-28'}`}>
         {/* Struk merah muda yang menumpuk: bulan baru di bawah, bulan lama terdorong ke atas */}
         <div
           ref={tumpukan}
@@ -331,9 +331,10 @@ export function Scene05bPaylaterPath() {
               <div className="struk-baris">
                 <span>KOLEKTIBILITAS</span>
                 <span aria-hidden className="isi" />
-                <span className="font-bold">KOL {kol.kol}</span>
+                <span className={`font-bold ${kol.kol > 1 ? 'text-minus-teks' : ''}`}>
+                  KOL {kol.kol} · {kol.label.toUpperCase()}
+                </span>
               </div>
-              <p className={kol.kol > 1 ? 'text-minus-teks' : ''}>{kol.label}</p>
               <div className="struk-baris">
                 <span>BULAN TELAT</span>
                 <span aria-hidden className="isi" />
@@ -355,7 +356,7 @@ export function Scene05bPaylaterPath() {
             {/* Stempel */}
             <div
               ref={stempel}
-              className={`${fase === 'selesai' ? '' : 'invisible'} pointer-events-none absolute inset-x-0 top-[38%] flex justify-center lg:top-auto lg:-bottom-16 lg:justify-end lg:pr-2`}
+              className={`${fase === 'selesai' ? '' : 'invisible'} pointer-events-none absolute inset-x-0 top-full mt-3 flex justify-center lg:justify-end lg:pr-2`}
             >
               <p
                 className={`-rotate-[9deg] rounded-md border-[5px] px-3 py-2 text-center font-display text-[clamp(1.35rem,6.5vw,1.9rem)] font-bold leading-[1.05] tracking-tight mix-blend-multiply ${
