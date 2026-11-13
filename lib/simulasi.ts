@@ -916,6 +916,27 @@ export function buildResult(input: SimulationInput): HasilKartu {
   return hitungSimulasi(input).kartu;
 }
 
+/**
+ * URL gambar kartu 9:16 di /api/og. Dipakai prefetch (scene 07) DAN tampilan
+ * (scene 08), jadi string-nya identik dan cache browser/edge kena.
+ * Nominal rupiah HANYA ikut kalau user menyalakan "Tampilkan nominal gaji".
+ */
+export function urlKartu(k: HasilKartu, tampilkanNominal: boolean): string {
+  const q = new URLSearchParams({
+    p: k.persona.id,
+    sp: String(k.sisaPct),
+    u: k.umurDpRumah === null ? '' : String(k.umurDpRumah),
+    g: String(k.lifestylePct),
+    h: k.modeHard ? '1' : '0',
+    k: k.kprDitolak ? '1' : '0',
+  });
+  if (tampilkanNominal) {
+    q.set('s', String(k.sisa));
+    q.set('i', String(k.income));
+  }
+  return `/api/og?${q.toString()}`;
+}
+
 /* ---------- Sumber kebenaran tunggal ---------- */
 
 export interface HasilSimulasi {

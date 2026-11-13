@@ -3,7 +3,7 @@
 import { AnimatePresence, motion, useReducedMotion } from 'framer-motion';
 import { useEffect, useMemo, useRef, useState, type PointerEvent } from 'react';
 import { getar } from '@/lib/sound';
-import { useResult, useSimulationStore } from '@/store/useSimulationStore';
+import { urlKartu, useResult, useSimulationStore } from '@/store/useSimulationStore';
 
 const NAMA_FILE = 'hidup-ngepas.png';
 
@@ -17,6 +17,36 @@ function unduhBlob(blob: Blob) {
   a.click();
   a.remove();
   window.setTimeout(() => URL.revokeObjectURL(url), 2000);
+}
+
+/**
+ * Placeholder selama gambar dicetak: sudah berbentuk kartu (struk, baris, blok sisa),
+ * jadi tidak ada lompatan tata letak. Denyutnya mati kalau reduced motion.
+ */
+function KerangkaKartu() {
+  const balok = 'rounded-sm bg-tinta/10';
+  return (
+    <div role="status" className="absolute inset-0 grid place-items-center bg-kertas p-[8%] motion-safe:animate-pulse">
+      <span className="hanya-sr">Lagi nyetak kartu lo...</span>
+      <div aria-hidden className="w-full border-2 border-tinta/20 bg-kertas-lipat/40 p-[7%]">
+        <div className={`h-2 w-1/2 ${balok}`} />
+        <div className="mt-3 h-px w-full bg-tinta/20" />
+        <div className={`mt-4 h-2 w-1/3 ${balok}`} />
+        <div className={`mt-2 h-6 w-4/5 ${balok}`} />
+        <div className={`mt-2 h-2 w-full ${balok}`} />
+        <div className={`mt-1.5 h-2 w-2/3 ${balok}`} />
+        <div className="mt-5 space-y-2.5">
+          {[0, 1].map((i) => (
+            <div key={i} className="flex justify-between">
+              <div className={`h-2 w-1/4 ${balok}`} />
+              <div className={`h-3 w-1/3 ${balok}`} />
+            </div>
+          ))}
+        </div>
+        <div className="mt-5 h-12 w-full rounded-sm border-2 border-tinta/20 bg-tinta/10" />
+      </div>
+    </div>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -82,11 +112,7 @@ function KartuHolo({ src, alt }: { src: string; alt: string }) {
             onLoad={() => setTermuat(true)}
             className={`h-full w-full object-cover transition-opacity duration-300 ${termuat ? 'opacity-100' : 'opacity-0'}`}
           />
-          {!termuat && (
-            <div className="absolute inset-0 grid place-items-center font-mono text-struk text-tinta-pudar">
-              Lagi nyetak kartu...
-            </div>
-          )}
+          {!termuat && <KerangkaKartu />}
           {/* Kilau holografik: pelangi tipis + sorot yang ikut kursor */}
           <div
             aria-hidden
@@ -133,22 +159,8 @@ export function Scene08Wrapped() {
   }, [markCompleted]);
 
   // Hanya angka ringkas yang dikirim ke /api/og. Nominal rupiah HANYA kalau toggle nyala.
-  const src = useMemo(() => {
-    if (!hasil) return null;
-    const q = new URLSearchParams({
-      p: hasil.persona.id,
-      sp: String(hasil.sisaPct),
-      u: hasil.umurDpRumah === null ? '' : String(hasil.umurDpRumah),
-      g: String(hasil.lifestylePct),
-      h: hasil.modeHard ? '1' : '0',
-      k: hasil.kprDitolak ? '1' : '0',
-    });
-    if (tampilkanNominal) {
-      q.set('s', String(hasil.sisa));
-      q.set('i', String(hasil.income));
-    }
-    return `/api/og?${q.toString()}`;
-  }, [hasil, tampilkanNominal]);
+  // URL sama persis dengan prefetch di scene 07, jadi biasanya gambarnya sudah di cache.
+  const src = useMemo(() => (hasil ? urlKartu(hasil, tampilkanNominal) : null), [hasil, tampilkanNominal]);
 
   if (!hasil || !src) return null;
 

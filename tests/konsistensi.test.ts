@@ -11,6 +11,7 @@ import {
   compareWhatIf,
   hitungSimulasi,
   slipSetoran,
+  urlKartu,
   type LifestyleId,
   type SimulationInput,
 } from '@/lib/simulasi';
@@ -158,5 +159,28 @@ describe('P1-1: umur dari input dipakai proyeksi', () => {
     expect(muda.umurSisaPlus!).toBeGreaterThanOrEqual(17);
     expect(muda.umurSisaPlus!).toBeLessThan(tua.umurSisaPlus!);
     expect(muda.umurDpRumah).not.toBe(tua.umurDpRumah);
+  });
+});
+
+describe('P1-4: URL kartu (prefetch = tampilan) dan privasi nominal', () => {
+  it('tanpa toggle: tidak ada nominal rupiah di URL', () => {
+    const k = buildResult(skenario);
+    const q = new URL(urlKartu(k, false), 'http://x').searchParams;
+    expect(q.has('s')).toBe(false);
+    expect(q.has('i')).toBe(false);
+    expect(q.get('sp')).toBe(String(k.sisaPct));
+    expect(q.get('g')).toBe(String(k.lifestylePct));
+    expect(q.get('u')).toBe(String(k.umurDpRumah ?? ''));
+  });
+
+  it('dengan toggle: nominal ikut, angka sama dengan struk', () => {
+    const k = buildResult(skenario);
+    const q = new URL(urlKartu(k, true), 'http://x').searchParams;
+    expect(q.get('s')).toBe(String(calcMonthly(skenario).sisa));
+    expect(q.get('i')).toBe(String(skenario.income));
+  });
+
+  it('input sama → URL identik (supaya cache prefetch kena)', () => {
+    expect(urlKartu(buildResult(skenario), false)).toBe(urlKartu(buildResult({ ...skenario }), false));
   });
 });

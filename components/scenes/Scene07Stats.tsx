@@ -3,7 +3,15 @@
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useEffect, useRef, useState } from 'react';
-import { CITIES, STATISTIK, useMonthly, useSimulationStore, type Statistik } from '@/store/useSimulationStore';
+import {
+  CITIES,
+  STATISTIK,
+  urlKartu,
+  useMonthly,
+  useResult,
+  useSimulationStore,
+  type Statistik,
+} from '@/store/useSimulationStore';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -90,6 +98,18 @@ export function Scene07Stats() {
   const next = useSimulationStore((s) => s.next);
   const layar = useRef<HTMLElement>(null);
   const [aktif, setAktif] = useState(0);
+
+  // Mulai cetak kartu hasil SEKARANG, selagi user membaca: begitu sampai scene 08
+  // gambarnya biasanya sudah di cache (URL identik dengan yang dipakai scene 08).
+  const hasil = useResult();
+  const tampilkanNominal = useSimulationStore((s) => s.showAmountOnCard);
+  const urlPrefetch = hasil ? urlKartu(hasil, tampilkanNominal) : null;
+  useEffect(() => {
+    if (!urlPrefetch) return;
+    const img = new Image();
+    img.decoding = 'async';
+    img.src = urlPrefetch;
+  }, [urlPrefetch]);
 
   // Titik per kartu: tiap kartu diterjemahkan ke "berapa dari 100"
   const totalKeluar = bulanan?.total ?? 0;

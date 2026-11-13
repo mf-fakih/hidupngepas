@@ -67,16 +67,8 @@ export async function GET(req: Request) {
   return new ImageResponse(
     (
       <div style={{ width: W, height: H, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', background: KERTAS, fontFamily: 'Display', color: TINTA, position: 'relative' }}>
-        {/* Teks latar raksasa, gaya marquee */}
-        <div style={{ position: 'absolute', top: 70, left: -40, display: 'flex', fontFamily: 'Mono', fontWeight: 700, fontSize: 150, color: 'rgba(20,20,20,0.06)', whiteSpace: 'nowrap' }}>
-          GAJI NGEPAS • SISA -RP •
-        </div>
-        <div style={{ position: 'absolute', bottom: 60, left: -120, display: 'flex', fontFamily: 'Mono', fontWeight: 700, fontSize: 150, color: 'rgba(20,20,20,0.06)', whiteSpace: 'nowrap' }}>
-          TANGGAL TUA • PAYLATER •
-        </div>
-
         {/* Struk */}
-        <div style={{ width: 900, display: 'flex', flexDirection: 'column', background: '#FBF8F2', border: `5px solid ${TINTA}`, boxShadow: `18px 18px 0 ${TINTA}`, padding: '64px 64px 56px' }}>
+        <div style={{ width: 940, display: 'flex', flexDirection: 'column', background: '#FBF8F2', border: `5px solid ${TINTA}`, boxShadow: `18px 18px 0 ${TINTA}`, padding: '64px 64px 56px' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', fontFamily: 'Mono', fontWeight: 700, fontSize: 30, letterSpacing: 6 }}>
             <span>HIDUP NGEPAS</span>
             <span style={{ color: TINTA_PUDAR, fontWeight: 400 }}>HASIL SIMULASI</span>
@@ -128,7 +120,7 @@ export async function GET(req: Request) {
       width: W,
       height: H,
       fonts: fonts.length ? fonts : undefined,
-      headers: { 'Cache-Control': 'public, max-age=86400, immutable' },
+      headers: { 'Cache-Control': 'public, max-age=86400, s-maxage=604800, immutable' },
     },
   );
 }
