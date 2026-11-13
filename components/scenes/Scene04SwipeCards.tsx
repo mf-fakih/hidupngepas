@@ -17,6 +17,7 @@ import {
   LIFESTYLE_ITEMS,
   calcLifestyleItem,
   formatRupiah,
+  kartuBerikutnya,
   useLifestyleTotal,
   useSimulationStore,
   type LifestyleId,
@@ -24,6 +25,8 @@ import {
 } from '@/store/useSimulationStore';
 
 type Arah = 'kanan' | 'kiri';
+/** Perintah tombol selalu membawa ID kartu yang tampil saat diklik */
+type Perintah = { id: LifestyleId; arah: Arah };
 
 /** Jarak geser (px) sampai kartu dianggap benar-benar di-swipe */
 const AMBANG = 96;
@@ -60,11 +63,14 @@ const KELAS_KARTU =
 function KartuAtas({
   item,
   paksa,
+  onMulai,
   onSelesai,
 }: {
   item: LifestyleItem;
   /** Diisi saat user menekan tombol alternatif: kartu terbang ke arah itu */
-  paksa: Arah | null;
+  paksa: Perintah | null;
+  /** Kartu mulai terbang (tombol atau gesture): induk mengunci input */
+  onMulai: () => void;
   onSelesai: (arah: Arah) => void;
 }) {
   const kurangiGerak = useReducedMotion();
@@ -76,11 +82,14 @@ function KartuAtas({
   const sedangTerbang = useRef(false);
   const onSelesaiRef = useRef(onSelesai);
   onSelesaiRef.current = onSelesai;
+  const onMulaiRef = useRef(onMulai);
+  onMulaiRef.current = onMulai;
 
   const terbang = useCallback(
     (arah: Arah) => {
       if (sedangTerbang.current) return;
       sedangTerbang.current = true;
+      onMulaiRef.current();
       if (kurangiGerak) {
         onSelesaiRef.current(arah);
         return;
@@ -94,9 +103,10 @@ function KartuAtas({
     [kurangiGerak, x],
   );
 
+  // Perintah untuk kartu lain (basi) diabaikan
   useEffect(() => {
-    if (paksa) terbang(paksa);
-  }, [paksa, terbang]);
+    if (paksa && paksa.id === item.id) terbang(paksa.arah);
+  }, [paksa, item.id, terbang]);
 
   const bind = useDrag(
     ({ active, movement: [mx], velocity: [vx] }) => {
@@ -193,7 +203,10 @@ export function Scene04SwipeCards() {
   const next = useSimulationStore((s) => s.next);
   const total = useLifestyleTotal();
 
-  const [paksa, setPaksa] = useState<Arah | null>(null);
+  const [paksa, setPaksa] = useState<Perintah | null>(null);
+  /** true selama kartu terbang: semua tombol (termasuk "Balikin") dikunci */
+  const [terkunci, setTerkunci] = useState(false);
+  const kunci = useRef(false);
   const [kabar, setKabar] = useState('');
 
   const sisa = useMemo(
@@ -204,9 +217,18 @@ export function Scene04SwipeCards() {
   const habis = sisa.length === 0;
   const modeHard = habis && jumlahKanan === jumlah;
 
+  const mulaiTerbang = () => {
+    kunci.current = true;
+    setTerkunci(true);
+  };
+
   const selesaiSwipe = (id: LifestyleId, label: string, arah: Arah) => {
-    swipe(id, arah);
+    kunci.current = false;
+    setTerkunci(false);
     setPaksa(null);
+    // Animasi lama yang selesai terlambat untuk kartu lain: abaikan
+    if (kartuBerikutnya(useSimulationStore.getState().swipedIds) !== id) return;
+    swipe(id, arah);
     if (arah === 'kanan') {
       getar(10);
       if (soundOn) playKaChing();
@@ -214,7 +236,16 @@ export function Scene04SwipeCards() {
     setKabar(arah === 'kanan' ? `${label}: gue banget.` : `${label}: skip.`);
   };
 
+  /** Tombol Skip / Gue banget: ambil kartu yang tampil SEKARANG, bukan index */
+  const tekan = (arah: Arah) => {
+    const tampil = kartuBerikutnya(useSimulationStore.getState().swipedIds);
+    if (!tampil || kunci.current) return;
+    mulaiTerbang();
+    setPaksa({ id: tampil, arah });
+  };
+
   const balikin = () => {
+    if (kunci.current) return;
     undoSwipe();
     setPaksa(null);
     setKabar('Kartu terakhir dibalikin.');
@@ -270,6 +301,7 @@ export function Scene04SwipeCards() {
                 key={item.id}
                 item={item}
                 paksa={paksa}
+                onMulai={mulaiTerbang}
                 onSelesai={(arah) => selesaiSwipe(item.id, item.label, arah)}
               />
             );
@@ -327,16 +359,16 @@ export function Scene04SwipeCards() {
           <div className="grid grid-cols-2 gap-3 lg:max-w-[28rem]">
             <button
               type="button"
-              onClick={() => setPaksa('kiri')}
-              disabled={paksa !== null}
+              onClick={() => tekan('kiri')}
+              disabled={terkunci}
               className="tombol-polos !min-h-[3.5rem] text-lg"
             >
               Skip
             </button>
             <button
               type="button"
-              onClick={() => setPaksa('kanan')}
-              disabled={paksa !== null}
+              onClick={() => tekan('kanan')}
+              disabled={terkunci}
               className="tombol-cta"
             >
               Gue banget
@@ -347,8 +379,8 @@ export function Scene04SwipeCards() {
         <button
           type="button"
           onClick={balikin}
-          disabled={swipedIds.length === 0}
-          className="mx-auto mt-2 flex min-h-sentuh items-center px-4 font-display text-sm font-medium text-tinta underline underline-offset-4 disabled:invisible lg:mx-0 lg:px-0"
+          disabled={swipedIds.length === 0 || terkunci}
+          className={`mx-auto mt-2 flex min-h-sentuh items-center px-4 font-display text-sm font-medium text-tinta underline underline-offset-4 lg:mx-0 lg:px-0 ${swipedIds.length === 0 ? 'invisible' : ''}`}
         >
           Balikin kartu terakhir
         </button>
