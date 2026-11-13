@@ -4,8 +4,12 @@ import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { useEffect, useRef, useState } from 'react';
 import {
+  ASUMSI,
   CITIES,
   STATISTIK,
+  bebanPaylater,
+  formatRupiahRingkas,
+  teksSumber,
   urlKartu,
   useMonthly,
   useResult,
@@ -82,7 +86,7 @@ function KartuStat({ stat, titik, indeks }: { stat: Statistik; titik: Titik; ind
         </p>
         <p className="mt-3 font-display text-xl font-bold leading-snug text-tinta lg:mt-5 lg:text-3xl lg:leading-tight">{stat.label}</p>
         <p className="mt-3 border-t-2 border-dashed border-tinta/30 pt-3 text-tinta">{titik.keterangan}</p>
-        <p className="mt-2 font-mono text-[0.6875rem] text-tinta-pudar">Sumber: {stat.sumber}</p>
+        <p className="mt-2 font-mono text-[0.6875rem] text-tinta-pudar">Sumber: {teksSumber(stat)}</p>
       </div>
     </article>
   );
@@ -129,11 +133,24 @@ export function Scene07Stats() {
           ? `Upah segitu cuma nutup ${tutup}% pengeluaran bulanan lo di ${kota}.`
           : `Upah segitu cukup buat pengeluaran lo di ${kota}. Tipis, tapi cukup.`,
     },
-    {
-      nyala: 100,
-      warna: 'minus',
-      keterangan: 'Kalau satu orang di sini = Rp 1,5 triliun, semuanya nyala.',
-    },
+    ((): Titik => {
+      // Personal: pinjaman paylater tadi dibandingkan dengan gaji lo sendiri
+      const beban = bulanan ? bebanPaylater(bulanan) : null;
+      if (!beban)
+        return {
+          nyala: 0,
+          warna: 'minus',
+          keterangan: `Pinjaman ${formatRupiahRingkas(ASUMSI.PAYLATER_LIMIT)} di aplikasi kayak tadi bisa bengkak jauh di atas pokoknya.`,
+        };
+      const bulan = beban.bulanGaji.toLocaleString('id-ID', { maximumFractionDigits: 1 });
+      return {
+        nyala: beban.persenTahun,
+        warna: 'minus',
+        keterangan: `Tagihan paylater ${formatRupiahRingkas(ASUMSI.PAYLATER_LIMIT)} tadi totalnya ${formatRupiahRingkas(
+          beban.totalKewajiban,
+        )} = ${bulan} bulan gaji lo. Di grid: ${beban.persenTahun} dari 100 bagian gaji setahun lo habis buat itu.`,
+      };
+    })(),
   ];
 
   useEffect(() => {

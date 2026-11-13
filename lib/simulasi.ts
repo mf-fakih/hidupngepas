@@ -430,6 +430,13 @@ export interface Statistik {
   format: (n: number) => string;
   label: string;
   sumber: string;
+  /**
+   * Periode rilis, mis. "Agustus 2025". null = BELUM diverifikasi: UI menulisnya
+   * terang-terangan. Isi hanya dari rilis resmi, jangan ditebak.
+   */
+  periode: string | null;
+  /** Halaman lembaga sumber (ditampilkan di metodologi scene 09) */
+  url: string;
 }
 
 /**
@@ -442,14 +449,18 @@ export const STATISTIK: Statistik[] = [
     nilai: 17.5,
     format: (n) => `${n.toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}%`,
     label: 'anak muda usia 15–24 tahun menganggur',
-    sumber: 'BPS, Survei Angkatan Kerja Nasional',
+    sumber: 'BPS, Survei Angkatan Kerja Nasional (Sakernas)',
+    periode: null, // ⚠️ isi dari rilis Sakernas yang dipakai
+    url: 'https://www.bps.go.id',
   },
   {
     id: 'upah',
     nilai: ASUMSI.UPAH_RATA_20_24,
     format: (n) => `Rp ${(n / 1_000_000).toLocaleString('id-ID', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} juta`,
     label: 'rata-rata upah pekerja muda usia 20–24 tahun',
-    sumber: 'BPS, Survei Angkatan Kerja Nasional',
+    sumber: 'BPS, Survei Angkatan Kerja Nasional (Sakernas)',
+    periode: null, // ⚠️ isi dari rilis Sakernas yang dipakai
+    url: 'https://www.bps.go.id',
   },
   {
     id: 'utang',
@@ -457,8 +468,32 @@ export const STATISTIK: Statistik[] = [
     format: (n) => `Rp ${n.toLocaleString('id-ID', { minimumFractionDigits: 1, maximumFractionDigits: 1 })} triliun`,
     label: 'total utang paylater & pinjol masyarakat',
     sumber: 'OJK, Statistik Fintech Lending & BNPL',
+    periode: null, // ⚠️ isi dari rilis statistik OJK yang dipakai
+    url: 'https://www.ojk.go.id',
   },
 ];
+
+/** "Sumber: BPS, Sakernas, Agustus 2025" — atau jujur kalau periodenya belum dicek */
+export function teksSumber(stat: Statistik): string {
+  return `${stat.sumber}, ${stat.periode ?? 'periode belum diverifikasi'}`;
+}
+
+/**
+ * Fakta ketiga dibuat personal: total yang harus dibayar kalau pinjaman paylater
+ * tadi dicairkan, dibandingkan dengan gaji lo sendiri.
+ *   bulanGaji  = total kewajiban ÷ penghasilan per bulan
+ *   persenTahun = total kewajiban ÷ penghasilan setahun (dipakai grid 100 orang)
+ * null kalau penghasilan 0 (tidak ada pembanding yang masuk akal).
+ */
+export function bebanPaylater(bulanan: Monthly) {
+  const p = calcPaylater(bulanan.sisa);
+  if (bulanan.income <= 0) return null;
+  return {
+    totalKewajiban: p.totalKewajiban,
+    bulanGaji: p.totalKewajiban / bulanan.income,
+    persenTahun: Math.min(100, Math.round((p.totalKewajiban / (bulanan.income * 12)) * 100)),
+  };
+}
 
 export interface IncomeMode {
   id: 'mie-instan' | 'ngepas' | 'waswas' | 'sultan-lokal';

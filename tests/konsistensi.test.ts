@@ -10,7 +10,10 @@ import {
   calcPaylater,
   compareWhatIf,
   hitungSimulasi,
+  bebanPaylater,
   slipSetoran,
+  STATISTIK,
+  teksSumber,
   urlKartu,
   type LifestyleId,
   type SimulationInput,
@@ -182,5 +185,26 @@ describe('P1-4: URL kartu (prefetch = tampilan) dan privasi nominal', () => {
 
   it('input sama → URL identik (supaya cache prefetch kena)', () => {
     expect(urlKartu(buildResult(skenario), false)).toBe(urlKartu(buildResult({ ...skenario }), false));
+  });
+});
+
+describe('P1-7: fakta ketiga personal & sumber jujur', () => {
+  it('beban paylater = total kewajiban dibanding gaji user sendiri', () => {
+    const b = calcMonthly(skenario);
+    const beban = bebanPaylater(b)!;
+    expect(beban.totalKewajiban).toBe(calcPaylater(b.sisa).totalKewajiban);
+    expect(beban.bulanGaji).toBeCloseTo(beban.totalKewajiban / skenario.income);
+    expect(beban.persenTahun).toBe(Math.round((beban.totalKewajiban / (skenario.income * 12)) * 100));
+  });
+
+  it('penghasilan 0 → tidak ada perbandingan', () => {
+    expect(bebanPaylater(calcMonthly({ ...skenario, income: 0 }))).toBeNull();
+  });
+
+  it('periode sumber tidak pernah ditebak: kosong = tertulis belum diverifikasi', () => {
+    for (const st of STATISTIK) {
+      expect(st.url.startsWith('https://')).toBe(true);
+      if (st.periode === null) expect(teksSumber(st)).toContain('periode belum diverifikasi');
+    }
   });
 });

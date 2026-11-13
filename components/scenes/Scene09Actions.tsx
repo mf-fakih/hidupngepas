@@ -3,7 +3,14 @@
 import { AnimatePresence, motion } from 'framer-motion';
 import { useEffect, useRef, useState, type ReactNode } from 'react';
 import { getar } from '@/lib/sound';
-import { ASUMSI, formatRupiah, useMonthly, useSimulationStore } from '@/store/useSimulationStore';
+import {
+  ASUMSI,
+  STATISTIK,
+  formatRupiah,
+  teksSumber,
+  useMonthly,
+  useSimulationStore,
+} from '@/store/useSimulationStore';
 
 /**
  * ⚠️ Tautan & nomor layanan di bawah perlu dicek ulang sebelum rilis
@@ -117,10 +124,21 @@ function Footer() {
       </ul>
 
       <h3 className="mt-6 font-display text-lg font-bold">{bahasa === 'id' ? 'Sumber data' : 'Data sources'}</h3>
-      <ul className="mt-2 space-y-1 text-sm">
-        <li>BPS — Survei Angkatan Kerja Nasional (pengangguran & upah usia muda)</li>
-        <li>OJK — Statistik fintech lending & paylater (BNPL)</li>
-        <li>Kemenaker — upah minimum provinsi/kabupaten</li>
+      <ul className="mt-2 space-y-2 text-sm">
+        {STATISTIK.map((st) => (
+          <li key={st.id}>
+            <span className="font-medium">{st.format(st.nilai)}</span> {st.label}.{' '}
+            <a href={st.url} target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+              {teksSumber(st)} ↗<span className="hanya-sr">(buka tab baru)</span>
+            </a>
+          </li>
+        ))}
+        <li>
+          Upah minimum provinsi/kabupaten:{' '}
+          <a href="https://kemnaker.go.id" target="_blank" rel="noopener noreferrer" className="underline underline-offset-2">
+            Kemenaker ↗<span className="hanya-sr">(buka tab baru)</span>
+          </a>
+        </li>
       </ul>
       <p className="mt-2 text-[0.75rem] text-tinta-pudar">
         {bahasa === 'id'
