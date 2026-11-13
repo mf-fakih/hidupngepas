@@ -11,14 +11,42 @@ import { ASUMSI, formatRupiah, useMonthly, useSimulationStore } from '@/store/us
  * Muncul tepat saat SISA minus: notifikasi ala sistem HP turun dari atas,
  * latar gelap ber-blur. Nama aplikasinya fiktif (bukan produk mana pun).
  * Esc = "Nggak dulu".
+ * Fokus terkurung di dialog: semua konten di luarnya diberi `inert`
+ * (tidak bisa di-Tab, tidak dibaca pembaca layar), lalu dikembalikan saat tutup.
  */
+
+/** Tandai inert semua saudara di sepanjang jalur dialog → body. Kembalikan fungsi pemulih. */
+function inertkanSekitar(el: HTMLElement): () => void {
+  const ditandai: HTMLElement[] = [];
+  for (let node: HTMLElement | null = el; node && node !== document.body; node = node.parentElement) {
+    const induk: HTMLElement | null = node.parentElement;
+    if (!induk) break;
+    for (const saudara of Array.from<Element>(induk.children)) {
+      if (saudara === node || !(saudara instanceof HTMLElement) || saudara.inert) continue;
+      // Jangan sentuh script/style; cukup elemen yang bisa terlihat/terjangkau
+      if (saudara.tagName === 'SCRIPT' || saudara.tagName === 'STYLE') continue;
+      saudara.inert = true;
+      ditandai.push(saudara);
+    }
+  }
+  return () => ditandai.forEach((n) => (n.inert = false));
+}
 export function Scene05aPaylaterModal() {
   const bulanan = useMonthly();
   const choosePaylater = useSimulationStore((s) => s.choosePaylater);
   const next = useSimulationStore((s) => s.next);
   const tombolTolak = useRef<HTMLButtonElement>(null);
+  const dialog = useRef<HTMLDivElement>(null);
+  // Modal masih ter-mount selama animasi keluar: Esc/klik kedua tidak boleh memilih lagi
+  const sudahMemilih = useRef(false);
+  /** Lepas inert & kunci scroll SAAT memilih, bukan saat unmount: modal masih
+      ter-mount selama animasi keluar, sementara scene berikutnya sudah aktif */
+  const lepas = useRef<() => void>(() => {});
 
   const pilih = (pilihan: 'cairkan' | 'tolak') => {
+    if (sudahMemilih.current) return;
+    sudahMemilih.current = true;
+    lepas.current();
     getar(pilihan === 'cairkan' ? [10, 40, 10] : 8);
     choosePaylater(pilihan);
     next(); // getNextScene membaca paylaterChoice yang baru: cairkan → 05b, tolak → 05c
@@ -31,8 +59,16 @@ export function Scene05aPaylaterModal() {
       if (e.key === 'Escape') tombolTolak.current?.click();
     };
     window.addEventListener('keydown', onKey);
-    return () => {
+    const pulihkan = dialog.current ? inertkanSekitar(dialog.current) : () => {};
+    let sudahLepas = false;
+    lepas.current = () => {
+      if (sudahLepas) return;
+      sudahLepas = true;
+      pulihkan();
       kunciScroll(false);
+    };
+    return () => {
+      lepas.current();
       window.removeEventListener('keydown', onKey);
     };
   }, []);
@@ -68,6 +104,7 @@ export function Scene05aPaylaterModal() {
 
         <div className="lg:col-span-6">
         <motion.div
+          ref={dialog}
           role="dialog"
           aria-modal="true"
           aria-labelledby="judul-cairkan"
