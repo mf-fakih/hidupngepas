@@ -245,29 +245,32 @@ function BannerLanjut() {
         ? 'gaya-hidup'
         : 'gaji';
 
+  // Banner tipis satu baris: CTA utama tetap satu-satunya yang menonjol
   return (
     <motion.div
       role="region"
       aria-label="Simulasi sebelumnya"
-      initial={{ opacity: 0, y: 12 }}
+      title="Jawaban lo kesimpen di HP ini, bukan di server kami."
+      initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ type: 'spring', stiffness: 300, damping: 26 }}
-      className="mb-3 rounded-kartu border-2 border-dashed border-tinta bg-kertas p-3 lg:mb-5 lg:max-w-md"
+      className="mb-2 flex items-center justify-between gap-2 border-y border-dashed border-tinta/40 pl-1 lg:mb-4 lg:max-w-md"
     >
-      <p className="font-display font-bold text-tinta">
-        {sudahSelesai ? 'Lanjut dari hasil terakhir?' : 'Lanjut dari yang tadi?'}
+      <p className="font-mono text-[0.75rem] leading-tight text-tinta-pudar">
+        {sudahSelesai ? 'Ada hasil terakhir lo di HP ini.' : 'Simulasi lo tadi belum kelar.'}
       </p>
-      <p className="mt-0.5 text-sm text-tinta-pudar">
-        Jawaban lo masih kesimpen di HP ini, bukan di server kami.
-      </p>
-      <div className="mt-2 flex gap-2">
-        <button type="button" onClick={() => goTo(tujuan)} className="tombol-polos flex-1 !py-2">
+      <div className="flex shrink-0 items-center">
+        <button
+          type="button"
+          onClick={() => goTo(tujuan)}
+          className="inline-flex min-h-sentuh items-center px-2 font-display text-sm font-bold text-tinta underline underline-offset-4"
+        >
           Lanjut
         </button>
         <button
           type="button"
           onClick={resetAll}
-          className="inline-flex min-h-sentuh flex-1 items-center justify-center rounded-chip px-3 font-display text-sm font-medium text-tinta underline underline-offset-4"
+          className="inline-flex min-h-sentuh items-center px-2 font-display text-sm font-medium text-tinta-pudar underline underline-offset-4"
         >
           Mulai dari nol
         </button>
@@ -360,7 +363,7 @@ export function Scene01Hero({ siap }: Props) {
 
       <div className="kolom-kanan">
         <div
-          className="urut-visual relative my-6 flex flex-1 items-center lg:my-0 lg:block lg:flex-none lg:pb-24"
+          className="urut-visual relative my-6 flex flex-1 items-center lg:my-0 lg:block lg:flex-none lg:pb-36"
           data-berat-slot="wallet-3d"
         >
           {/* Stiker miring, nempel di pojok struk */}
@@ -373,7 +376,7 @@ export function Scene01Hero({ siap }: Props) {
 
           <StrukContoh />
 
-          <div className="w-full lg:absolute lg:-bottom-6 lg:-left-20 lg:w-72">
+          <div className="w-full lg:absolute lg:-bottom-4 lg:-left-48 lg:w-64">
             <DompetTipis jatuh={siap} />
           </div>
         </div>
