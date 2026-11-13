@@ -25,6 +25,7 @@ gsap.registerPlugin(Flip, ScrollTrigger);
 const UMUR_AKHIR = ASUMSI.UMUR_AKHIR_TIMELINE;
 
 const IKON: Record<MilestoneId, string> = {
+  'sisa-plus': '📈',
   'dana-darurat': '🛡️',
   nikah: '💍',
   'dp-rumah': '🏠',
@@ -245,7 +246,7 @@ function kalimatAksi(w: WhatIf) {
 function kalimatDp(dasar: number | null, kalau: number | null, w: WhatIf) {
   const awal =
     dasar === null
-      ? 'Dengan kondisi sekarang, DP rumah belum kekejar sampai umur 70.'
+      ? `Dengan kondisi sekarang, DP rumah belum kekejar sampai umur ${UMUR_AKHIR}.`
       : `Lo bisa DP rumah di umur ${dasar}.`;
   const aksi = kalimatAksi(w);
   if (!aksi) return awal;
@@ -254,6 +255,18 @@ function kalimatDp(dasar: number | null, kalau: number | null, w: WhatIf) {
   if (kalau < dasar) return `${awal} Kalau ${aksi}, maju jadi umur ${kalau}.`;
   if (kalau > dasar) return `${awal} Kalau ${aksi}, malah mundur ke umur ${kalau}.`;
   return `${awal} Kalau ${aksi}, masih umur ${kalau}.`;
+}
+
+/**
+ * Satu baris jujur saat SISA sekarang belum plus: milestone di timeline
+ * datang dari asumsi gaji naik pelan, bukan dari kondisi hari ini.
+ */
+function kalimatSisaPlus(umurSekarang: number, umurSisaPlus: number | null) {
+  const laju = `${Math.round(ASUMSI.KENAIKAN_GAJI_RIIL * 100)}%/tahun`;
+  if (umurSisaPlus === null)
+    return `Sisa lo sekarang minus, dan dengan asumsi gaji naik pelan (${laju} di atas inflasi) tetep belum plus sampai umur ${UMUR_AKHIR}.`;
+  if (umurSisaPlus === umurSekarang) return null;
+  return `Sisa lo sekarang belum plus. Dengan asumsi gaji naik pelan (${laju} di atas inflasi), baru plus di umur ${umurSisaPlus}. Semua milestone dihitung dari situ.`;
 }
 
 /* ------------------------------------------------------------------ */
@@ -272,7 +285,7 @@ function hitungTitik(milestones: Milestone[], umurMulai: number, jarakMin: numbe
   const rentang = Math.max(1, UMUR_AKHIR - umurMulai);
   let terakhir = -Infinity;
   const hasil = milestones.map((m) => {
-    // Belum kekejar / lewat 60 → parkir di ujung sumbu
+    // Belum kekejar → parkir di ujung sumbu
     const pos =
       m.umur === null || m.umur > UMUR_AKHIR ? 1 : Math.max(0, (m.umur - umurMulai) / rentang);
     const posKartu = Math.max(pos, terakhir + jarakMin);
@@ -368,6 +381,7 @@ export function Scene06Timeline() {
     whatIf.nabungPerBulan !== WHAT_IF_AWAL.nabungPerBulan;
   const adaJajan = input.lifestyleIds.length > 0;
   const sisaKalau = kalau.nabungPerBulan;
+  const catatanSisa = kalimatSisaPlus(input.age, kalau.umurSisaPlus);
 
   // Tanda umur tiap 5 tahun
   const tanda: number[] = [];
@@ -390,6 +404,9 @@ export function Scene06Timeline() {
           >
             {kalimatDp(dasar.umurDpRumah, kalau.umurDpRumah, whatIf)}
           </p>
+          {catatanSisa && (
+            <p className="mt-2 max-w-[44ch] text-sm leading-snug text-tinta-pudar lg:mt-4 lg:text-base">{catatanSisa}</p>
+          )}
           {kalau.kprDitolak && (
             <p className="mt-2 text-sm font-medium text-minus-teks lg:mt-4">
               Catatan: duitnya mungkin kekejar, tapi riwayat telat paylater bikin KPR rawan ditolak.
@@ -480,7 +497,6 @@ export function Scene06Timeline() {
                       ) : (
                         <>
                           umur <AngkaUmur umur={m.umur} />
-                          {m.lewatTimeline && <span className="text-sm font-normal"> (lewat 60)</span>}
                         </>
                       )}
                     </p>
@@ -490,7 +506,9 @@ export function Scene06Timeline() {
                       </p>
                     )}
                     <p className="mt-1 font-mono text-[0.6875rem] text-tinta-pudar">
-                      target {formatRupiahRingkas(m.target)}
+                      {m.id === 'sisa-plus'
+                        ? `asumsi gaji naik ${Math.round(ASUMSI.KENAIKAN_GAJI_RIIL * 100)}%/thn`
+                        : `target ${formatRupiahRingkas(m.target)}`}
                     </p>
                   </article>
                   </div>
@@ -558,7 +576,7 @@ export function Scene06Timeline() {
                   <div>
                     <p className="flex justify-between font-display text-sm font-medium text-tinta">
                       <span>Kalau kopi susu / jajan dikurangi</span>
-                      <span className="font-mono font-bold">−{whatIf.jajanHematPct}%</span>
+                      <span className="font-mono font-bold">{whatIf.jajanHematPct > 0 ? `−${whatIf.jajanHematPct}` : 0}%</span>
                     </p>
                     {adaJajan ? (
                       <MoneySlider
@@ -592,7 +610,9 @@ export function Scene06Timeline() {
                 </div>
                 <p className="px-4 pb-3 text-[0.75rem] leading-snug text-tinta-pudar">
                   {sisaKalau <= 0
-                    ? `Sisa lo masih minus ${formatRupiah(Math.abs(sisaKalau))}/bulan, jadi belum ada yang bisa ditabung. Coba geser gaji atau jajan dulu.`
+                    ? `Bulan ini sisa lo minus ${formatRupiah(Math.abs(sisaKalau))}, jadi belum ada yang ditabung${
+                        kalau.umurSisaPlus !== null ? ` sampai umur ${kalau.umurSisaPlus}` : ''
+                      }. Coba geser gaji atau jajan dulu.`
                     : whatIf.nabungPerBulan === null
                       ? 'Tanpa komitmen, dianggap separuh sisa yang ketabung (separuhnya bocor halus).'
                       : 'Nabung dibatasi sebesar sisa per bulan lo.'}

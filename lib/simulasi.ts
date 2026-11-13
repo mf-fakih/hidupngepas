@@ -60,7 +60,8 @@ export type SceneId =
   | 'kartu'
   | 'aksi';
 
-export type MilestoneId = 'dana-darurat' | 'nikah' | 'dp-rumah' | 'pensiun';
+/** 'sisa-plus' = milestone 0: hanya muncul kalau SISA sekarang belum plus */
+export type MilestoneId = 'sisa-plus' | 'dana-darurat' | 'nikah' | 'dp-rumah' | 'pensiun';
 
 /** Semua angka yang "diputuskan", bukan diukur. Ubah di sini, bukan di rumus. */
 export const ASUMSI = {
@@ -74,7 +75,8 @@ export const ASUMSI = {
   KENAIKAN_GAJI_RIIL: 0.02,
   IMBAL_HASIL_RIIL: 0.02,
   UMUR_MAKS_SIMULASI: 70,
-  UMUR_AKHIR_TIMELINE: 60,
+  /** Sama dengan rentang hitungan: judul timeline tidak boleh menjanjikan rentang lain */
+  UMUR_AKHIR_TIMELINE: 70,
 
   DANA_DARURAT_BULAN: 3,
   BIAYA_NIKAH: 50_000_000,
@@ -735,8 +737,6 @@ export interface Milestone {
   target: number;
   /** Umur saat tercapai. null = belum kekejar sampai umur 70. */
   umur: number | null;
-  /** Tercapai, tapi di luar timeline (setelah 60) */
-  lewatTimeline: boolean;
 }
 
 export interface Projection {
@@ -747,6 +747,11 @@ export interface Projection {
   dpRumah: number;
   /** Tabungan bulan pertama (negatif = defisit) */
   nabungPerBulan: number;
+  /**
+   * Umur saat SISA bulanan pertama kali plus, karena asumsi gaji naik pelan.
+   * = umur sekarang kalau sudah plus. null = tidak pernah plus sampai umur 70.
+   */
+  umurSisaPlus: number | null;
   /** Tabungannya cukup, tapi riwayat SLIK bikin KPR ditolak */
   kprDitolak: boolean;
   /** 0–1, untuk skala rumah 3D: makin cepat DP terkumpul, makin besar rumahnya */
@@ -811,14 +816,21 @@ export function projectLife(input: SimulationInput, whatIf: WhatIf = WHAT_IF_AWA
     }
   }
 
-  const milestones: Milestone[] = tujuan.map((t) => {
-    const umur = umurTercapai[t.id] ?? null;
-    return {
-      ...t,
-      umur,
-      lewatTimeline: umur !== null && umur > ASUMSI.UMUR_AKHIR_TIMELINE,
-    };
-  });
+  // Sisa per bulan naik tiap tahun karena gaji naik, pengeluaran tetap
+  let umurSisaPlus: number | null = null;
+  for (let tahun = 0; input.age + tahun <= ASUMSI.UMUR_MAKS_SIMULASI; tahun++) {
+    const sisaTahunIni = bulanan.income * (1 + ASUMSI.KENAIKAN_GAJI_RIIL) ** tahun - bulanan.total;
+    if (calcNabungPerBulan(sisaTahunIni, whatIf) > 0) {
+      umurSisaPlus = input.age + tahun;
+      break;
+    }
+  }
+
+  const milestones: Milestone[] = tujuan.map((t) => ({ ...t, umur: umurTercapai[t.id] ?? null }));
+  // Milestone 0: kalau sekarang belum bisa nabung, tunjukkan kapan mulai bisa
+  if (umurSisaPlus !== input.age) {
+    milestones.unshift({ id: 'sisa-plus', label: 'Sisa mulai plus', target: 0, umur: umurSisaPlus });
+  }
 
   const umurDpRumah = umurTercapai['dp-rumah'] ?? null;
 
@@ -836,6 +848,7 @@ export function projectLife(input: SimulationInput, whatIf: WhatIf = WHAT_IF_AWA
     hargaRumah: kota.hargaRumah,
     dpRumah,
     nabungPerBulan: calcNabungPerBulan(bulanan.sisa, whatIf),
+    umurSisaPlus,
     kprDitolak: paylater?.slikBermasalah ?? false,
     skalaRumah: Math.round(skalaRumah * 100) / 100,
   };

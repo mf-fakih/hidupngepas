@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  ASUMSI,
   CITY_LIST,
   LIFESTYLE_ITEMS,
   STATUS_LIST,
@@ -25,6 +26,31 @@ const skenario: SimulationInput = {
   paylaterChoice: 'cairkan',
 };
 
+// Matriks: semua status × kota × beberapa gaji × sobekan × pilihan paylater
+const gajiUji = [0, 800_000, 2_500_000, 5_000_000, 12_000_000];
+const gayaUji: { ambil: LifestyleId[]; sobek: LifestyleId[] }[] = [
+  { ambil: [], sobek: [] },
+  { ambil: ['kopi-susu', 'nongkrong'], sobek: [] },
+  { ambil: ['kopi-susu', 'konser', 'hp-baru'], sobek: ['hp-baru'] },
+  { ambil: LIFESTYLE_ITEMS.map((i) => i.id), sobek: ['ojol', 'skincare', 'konser'] },
+];
+const kasus: SimulationInput[] = [];
+for (const st of STATUS_LIST)
+  for (const kota of CITY_LIST)
+    for (const income of gajiUji)
+      for (const g of gayaUji)
+        for (const paylaterChoice of ['cairkan', 'tolak', null] as const)
+          kasus.push({
+            status: st.id,
+            cityId: kota.id,
+            age: st.umurDefault,
+            income,
+            lifestyleIds: g.ambil,
+            tornIds: g.sobek,
+            paylaterChoice,
+          });
+
+
 describe('P0-1: kartu hasil = struk = timeline', () => {
   it('kartu memakai angka struk setelah sobekan (skenario laporan)', () => {
     const struk = calcMonthly(skenario);
@@ -41,30 +67,6 @@ describe('P0-1: kartu hasil = struk = timeline', () => {
     const kartu = buildResult(skenario);
     expect(kartu.umurDpRumah).toBe(timeline.dasar.umurDpRumah);
   });
-
-  // Matriks: semua status × kota × beberapa gaji × sobekan × pilihan paylater
-  const gajiUji = [0, 800_000, 2_500_000, 5_000_000, 12_000_000];
-  const gayaUji: { ambil: LifestyleId[]; sobek: LifestyleId[] }[] = [
-    { ambil: [], sobek: [] },
-    { ambil: ['kopi-susu', 'nongkrong'], sobek: [] },
-    { ambil: ['kopi-susu', 'konser', 'hp-baru'], sobek: ['hp-baru'] },
-    { ambil: LIFESTYLE_ITEMS.map((i) => i.id), sobek: ['ojol', 'skincare', 'konser'] },
-  ];
-  const kasus: SimulationInput[] = [];
-  for (const st of STATUS_LIST)
-    for (const kota of CITY_LIST)
-      for (const income of gajiUji)
-        for (const g of gayaUji)
-          for (const paylaterChoice of ['cairkan', 'tolak', null] as const)
-            kasus.push({
-              status: st.id,
-              cityId: kota.id,
-              age: st.umurDefault,
-              income,
-              lifestyleIds: g.ambil,
-              tornIds: g.sobek,
-              paylaterChoice,
-            });
 
   it(`semua scene memakai angka identik (${kasus.length} kombinasi input)`, () => {
     for (const input of kasus) {
@@ -120,5 +122,31 @@ describe('P0-4: slip jalur nabung jujur', () => {
     expect(slip.kosong).toBe(false);
     expect(slip.setoran).toBe(compareWhatIf(input, WHAT_IF_AWAL).dasar.nabungPerBulan);
     expect(slip.setoran).toBeGreaterThan(0);
+  });
+});
+
+describe('P0-5: timeline tidak saling bertentangan', () => {
+  it('sisa minus → milestone 0 "sisa mulai plus" ada, dan semua milestone lain sesudahnya', () => {
+    const p = compareWhatIf(skenario, WHAT_IF_AWAL).dasar;
+    expect(p.nabungPerBulan).toBeLessThan(0);
+    expect(p.umurSisaPlus).not.toBeNull();
+    expect(p.umurSisaPlus!).toBeGreaterThan(skenario.age);
+    expect(p.milestones[0]).toMatchObject({ id: 'sisa-plus', umur: p.umurSisaPlus });
+    for (const m of p.milestones.slice(1)) if (m.umur !== null) expect(m.umur).toBeGreaterThanOrEqual(p.umurSisaPlus!);
+  });
+
+  it('sisa plus → tidak ada milestone 0, umurSisaPlus = umur sekarang', () => {
+    const input: SimulationInput = { ...skenario, income: 6_000_000, tornIds: [], paylaterChoice: null };
+    const p = compareWhatIf(input, WHAT_IF_AWAL).dasar;
+    expect(p.umurSisaPlus).toBe(input.age);
+    expect(p.milestones.map((m) => m.id)).not.toContain('sisa-plus');
+  });
+
+  it('rentang timeline = rentang hitungan (umur 70)', () => {
+    expect(ASUMSI.UMUR_AKHIR_TIMELINE).toBe(ASUMSI.UMUR_MAKS_SIMULASI);
+    for (const input of kasus) {
+      for (const m of compareWhatIf(input, WHAT_IF_AWAL).dasar.milestones)
+        if (m.umur !== null) expect(m.umur).toBeLessThanOrEqual(ASUMSI.UMUR_AKHIR_TIMELINE);
+    }
   });
 });
