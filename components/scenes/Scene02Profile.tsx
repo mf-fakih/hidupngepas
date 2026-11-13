@@ -5,6 +5,7 @@ import { useMemo, useState } from 'react';
 import { ChipSelector, type OpsiChip } from '@/components/ui/ChipSelector';
 import { MejaKasir } from '@/components/ui/MejaKasir';
 import {
+  ASUMSI,
   CITIES,
   CITY_LIST,
   STATUS_LIST,
@@ -114,6 +115,49 @@ function PetaIndonesia({ cityId }: { cityId: CityId | null }) {
 }
 
 /* ------------------------------------------------------------------ */
+/* Stepper umur: ringan, satu jempol, default ikut status              */
+/* ------------------------------------------------------------------ */
+
+function StepperUmur() {
+  const age = useSimulationStore((s) => s.age);
+  const setAge = useSimulationStore((s) => s.setAge);
+  const kelasTombol =
+    'grid h-sentuh w-sentuh shrink-0 place-items-center rounded-full border-2 border-tinta bg-kertas font-mono text-2xl font-bold leading-none text-tinta disabled:opacity-30';
+
+  return (
+    <div className="mt-6 lg:mt-8">
+      <p id="label-umur" className="font-display text-lg font-bold text-tinta">
+        Umur lo
+      </p>
+      <div role="group" aria-labelledby="label-umur" className="mt-2 flex items-center gap-3">
+        <button
+          type="button"
+          onClick={() => setAge(age - 1)}
+          disabled={age <= ASUMSI.UMUR_MIN}
+          aria-label="Kurangi umur"
+          className={kelasTombol}
+        >
+          −
+        </button>
+        <output aria-live="polite" className="min-w-[3ch] text-center font-mono text-3xl font-bold text-tinta">
+          {age}
+        </output>
+        <button
+          type="button"
+          onClick={() => setAge(age + 1)}
+          disabled={age >= ASUMSI.UMUR_MAKS_INPUT}
+          aria-label="Tambah umur"
+          className={kelasTombol}
+        >
+          +
+        </button>
+        <span className="text-sm leading-snug text-tinta-pudar">tahun. Timeline lo mulai dari sini.</span>
+      </div>
+    </div>
+  );
+}
+
+/* ------------------------------------------------------------------ */
 /* 02 — Status & Kota                                                  */
 /* ------------------------------------------------------------------ */
 
@@ -164,6 +208,9 @@ export function Scene02Profile() {
         ukuran="besar"
         className="mt-4 grid grid-cols-2 gap-3 lg:mt-8 lg:max-w-[34rem]"
       />
+
+      {/* Muncul setelah status dipilih: default umur ikut status (sekolah 17, kuliah 20, ...) */}
+      {status && <StepperUmur />}
 
       <h3
         id="judul-kota"

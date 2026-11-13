@@ -150,3 +150,13 @@ describe('P0-5: timeline tidak saling bertentangan', () => {
     }
   });
 });
+
+describe('P1-1: umur dari input dipakai proyeksi', () => {
+  it('umur lebih muda → milestone yang sama tercapai di umur berbeda, timeline mulai dari umur input', () => {
+    const tua = compareWhatIf({ ...skenario, age: 30 }, WHAT_IF_AWAL).dasar;
+    const muda = compareWhatIf({ ...skenario, age: 17 }, WHAT_IF_AWAL).dasar;
+    expect(muda.umurSisaPlus!).toBeGreaterThanOrEqual(17);
+    expect(muda.umurSisaPlus!).toBeLessThan(tua.umurSisaPlus!);
+    expect(muda.umurDpRumah).not.toBe(tua.umurDpRumah);
+  });
+});

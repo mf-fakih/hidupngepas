@@ -161,7 +161,7 @@ export const useSimulationStore = create<SimulationStore>()(
 
       setCity: (cityId) => set({ cityId, paylaterChoice: null }),
 
-      setAge: (age) => set({ age: jepit(Math.round(age), 15, 59) }),
+      setAge: (age) => set({ age: jepit(Math.round(age), ASUMSI.UMUR_MIN, ASUMSI.UMUR_MAKS_INPUT) }),
 
       setIncome: (income) =>
         set({

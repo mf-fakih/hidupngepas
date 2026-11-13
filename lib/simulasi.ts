@@ -74,6 +74,9 @@ export const ASUMSI = {
   /** Proyeksi dihitung dalam nilai rupiah hari ini, jadi semua laju di bawah = di atas inflasi */
   KENAIKAN_GAJI_RIIL: 0.02,
   IMBAL_HASIL_RIIL: 0.02,
+  /** Rentang input umur di scene 02 (target: pelajar SMA sampai pekerja muda) */
+  UMUR_MIN: 15,
+  UMUR_MAKS_INPUT: 35,
   UMUR_MAKS_SIMULASI: 70,
   /** Sama dengan rentang hitungan: judul timeline tidak boleh menjanjikan rentang lain */
   UMUR_AKHIR_TIMELINE: 70,
