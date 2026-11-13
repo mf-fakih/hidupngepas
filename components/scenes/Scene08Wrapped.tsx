@@ -164,10 +164,12 @@ export function Scene08Wrapped() {
       const blob = await ambilBlob();
       const file = new File([blob], NAMA_FILE, { type: 'image/png' });
       if (navigator.canShare?.({ files: [file] })) {
+        // Link persona: preview-nya cuma persona, tanpa angka gaji
+        const link = `${window.location.origin}/hasil/${hasil.persona.id}`;
         await navigator.share({
           files: [file],
           title: 'Hidup Ngepas',
-          text: `Persona gue: ${hasil.persona.nama}. Lo apa?`,
+          text: `Persona gue: ${hasil.persona.nama}. Lo apa? ${link}`,
         });
         setKabar('Kartu dibagikan.');
       } else {

@@ -23,9 +23,32 @@ const jetbrainsMono = localFont({
   display: 'swap',
 });
 
+/** Domain produksi. Bisa ditimpa lewat env kalau domainnya pindah. */
+const URL_SITUS = process.env.NEXT_PUBLIC_SITE_URL ?? 'https://hidupngepas.vercel.app';
+const JUDUL = 'Hidup Ngepas — Gaji lo cukup buat hidup?';
+const DESKRIPSI =
+  'Simulator realita finansial Gen Z. Dua menit, tanpa login, dihitung di HP lo: struk bulanan, godaan paylater, sampai umur berapa lo bisa DP rumah.';
+
+// Gambar OG/Twitter diambil otomatis dari app/opengraph-image.tsx & twitter-image.tsx
 export const metadata: Metadata = {
-  title: 'Hidup Ngepas — Gaji lo cukup buat hidup?',
-  description: 'Simulasi 2 menit. Tanpa login. Tanpa ngejudge (dikit).',
+  metadataBase: new URL(URL_SITUS),
+  title: JUDUL,
+  description: DESKRIPSI,
+  applicationName: 'Hidup Ngepas',
+  alternates: { canonical: '/' },
+  openGraph: {
+    type: 'website',
+    siteName: 'Hidup Ngepas',
+    locale: 'id_ID',
+    url: '/',
+    title: JUDUL,
+    description: DESKRIPSI,
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: JUDUL,
+    description: DESKRIPSI,
+  },
 };
 
 export const viewport: Viewport = {

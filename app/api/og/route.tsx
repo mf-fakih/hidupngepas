@@ -1,4 +1,5 @@
 import { ImageResponse } from 'next/og';
+import { fontOg } from '@/lib/og-font';
 import { PERSONAS, formatRupiah, type PersonaId } from '@/lib/simulasi';
 
 /**
@@ -26,30 +27,6 @@ const MINUS = '#E5383B';
 const MINUS_TEKS = '#C1121F'; // teks kecil: lolos AA di atas kertas
 const AMAN = '#2DC653';
 const NEON = '#C6FF3D';
-
-/** Ambil TTF dari Google Fonts. Gagal (offline) → pakai font bawaan Satori. */
-async function muatFont(keluarga: string, tebal: number): Promise<ArrayBuffer | null> {
-  try {
-    const css = await (
-      await fetch(`https://fonts.googleapis.com/css2?family=${keluarga}:wght@${tebal}`)
-    ).text();
-    const url = css.match(/src: url\((.+?)\) format\('(?:opentype|truetype)'\)/)?.[1];
-    if (!url) return null;
-    return await (await fetch(url)).arrayBuffer();
-  } catch {
-    return null;
-  }
-}
-
-let fontCache: Promise<{ name: string; data: ArrayBuffer; weight: 400 | 700 }[]> | null = null;
-function fontKartu() {
-  fontCache ??= Promise.all([
-    muatFont('Space+Grotesk', 700).then((data) => (data ? { name: 'Display', data, weight: 700 as const } : null)),
-    muatFont('JetBrains+Mono', 700).then((data) => (data ? { name: 'Mono', data, weight: 700 as const } : null)),
-    muatFont('JetBrains+Mono', 400).then((data) => (data ? { name: 'Mono', data, weight: 400 as const } : null)),
-  ]).then((daftar) => daftar.filter((f): f is NonNullable<typeof f> => f !== null));
-  return fontCache;
-}
 
 const angka = (v: string | null, min: number, max: number) => {
   if (v === null || v.trim() === '') return null;
@@ -85,7 +62,7 @@ export async function GET(req: Request) {
   const teksSisa =
     sisaRp !== null ? formatRupiah(sisaRp) : `${sisaPct > 0 ? '+' : ''}${sisaPct}% gaji`;
 
-  const fonts = await fontKartu();
+  const fonts = await fontOg();
 
   return new ImageResponse(
     (
