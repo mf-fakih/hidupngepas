@@ -9,6 +9,7 @@ import {
   calcPaylater,
   compareWhatIf,
   hitungSimulasi,
+  slipSetoran,
   type LifestyleId,
   type SimulationInput,
 } from '@/lib/simulasi';
@@ -94,5 +95,30 @@ describe('P0-1: kartu hasil = struk = timeline', () => {
     const hp = sobek.gayaHidup.baris.find((b) => b.id === 'hp-baru');
     expect(hp?.disobek).toBe(true);
     expect(utuh.gayaHidup.total - sobek.gayaHidup.total).toBe(hp?.nominal);
+  });
+});
+
+describe('P0-4: slip jalur nabung jujur', () => {
+  it('sisa minus → slip kosong, Rp 0', () => {
+    const sim = hitungSimulasi({ ...skenario, paylaterChoice: 'tolak' });
+    expect(sim.bulanan.sisa).toBeLessThan(0);
+    expect(slipSetoran(sim)).toEqual({ kosong: true, setoran: 0 });
+  });
+
+  it('sisa plus → setoran = tabungan bulan pertama di timeline', () => {
+    const input: SimulationInput = {
+      status: 'kerja',
+      cityId: 'jakarta',
+      age: 24,
+      income: 5_000_000,
+      lifestyleIds: ['kopi-susu', 'nongkrong'],
+      tornIds: [],
+      paylaterChoice: 'tolak',
+    };
+    const sim = hitungSimulasi(input);
+    const slip = slipSetoran(sim);
+    expect(slip.kosong).toBe(false);
+    expect(slip.setoran).toBe(compareWhatIf(input, WHAT_IF_AWAL).dasar.nabungPerBulan);
+    expect(slip.setoran).toBeGreaterThan(0);
   });
 });

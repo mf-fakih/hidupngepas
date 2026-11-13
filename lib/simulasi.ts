@@ -942,6 +942,18 @@ export function hitungSimulasi(input: SimulationInput, whatIf: WhatIf = WHAT_IF_
   };
 }
 
+/* ---------- Jalur nabung (scene 05c) ---------- */
+
+/**
+ * Isi slip setoran di jalur "Nggak dulu".
+ *   kosong  → SISA ≤ 0: tidak ada yang bisa disetor, slip tampil Rp 0
+ *   setoran → tabungan bulan pertama, SAMA dengan yang dipakai proyeksi timeline
+ */
+export function slipSetoran(sim: HasilSimulasi): { kosong: boolean; setoran: number } {
+  const kosong = sim.bulanan.sisa <= 0;
+  return { kosong, setoran: kosong ? 0 : Math.max(0, sim.proyeksi.nabungPerBulan) };
+}
+
 /* ---------- Swipe kartu gaya hidup (scene 04) ---------- */
 
 export interface StateSwipe {

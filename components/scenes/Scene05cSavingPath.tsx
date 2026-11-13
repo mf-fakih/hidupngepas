@@ -4,7 +4,13 @@ import gsap from 'gsap';
 import { motion } from 'framer-motion';
 import { useEffect, useRef, useState } from 'react';
 import { getar, playKaChing } from '@/lib/sound';
-import { formatRupiah, useMonthly, useSimulationStore } from '@/store/useSimulationStore';
+import {
+  formatRupiah,
+  formatRupiahRingkas,
+  slipSetoran,
+  useSimulasi,
+  useSimulationStore,
+} from '@/store/useSimulationStore';
 
 const JUMLAH_LEMBAR = 12; // satu lembar = satu bulan
 
@@ -18,11 +24,16 @@ const ACAK = [
  * 05c — Jalur Nabung
  * Tumpukan lembar tipografis: dua belas lembar "slip setoran" jatuh satu per satu
  * dan menumpuk dari bawah. Lembar awal pelan, berikutnya makin lancar.
+ *
+ * Jujur soal angka: kalau struk masih minus, slipnya KOSONG & tercoret (Rp 0),
+ * keputusan nolak utang tetap diapresiasi, dan ada jalan balik ke struk.
+ * Kalau plus, slip memuat setoran yang sebenarnya (proyeksi.nabungPerBulan).
  */
 export function Scene05cSavingPath() {
-  const bulanan = useMonthly();
+  const sim = useSimulasi();
   const soundOn = useSimulationStore((s) => s.soundOn);
   const next = useSimulationStore((s) => s.next);
+  const goTo = useSimulationStore((s) => s.goTo);
 
   const tumpukan = useRef<HTMLOListElement>(null);
   const [masuk, setMasuk] = useState(0);
@@ -74,8 +85,9 @@ export function Scene05cSavingPath() {
     return () => ctx.revert();
   }, []);
 
+  const bulanan = sim?.bulanan;
   const minus = bulanan && bulanan.isMinus ? Math.abs(bulanan.sisa) : 0;
-  const sisa = bulanan && !bulanan.isMinus ? bulanan.sisa : 0;
+  const { kosong, setoran } = sim ? slipSetoran(sim) : { kosong: true, setoran: 0 };
 
   return (
     <section className="scene scene-split" aria-labelledby="judul-nabung">
@@ -84,14 +96,16 @@ export function Scene05cSavingPath() {
           Babak 2 — Jalur B · Tanpa utang
         </p>
         <h2 id="judul-nabung" data-judul-scene tabIndex={-1} className="judul-editorial">
-          Pelan, tapi punya lo sendiri.
+          {kosong ? 'Nolak utang: bener. Slipnya masih kosong.' : 'Pelan, tapi punya lo sendiri.'}
         </h2>
         <p className="mt-2 text-tinta-pudar lg:mt-5 lg:max-w-[32ch] lg:text-lg lg:text-tinta">
-          Nolak paylater: bunga 0%, SLIK bersih, nggak ada yang nagih jam 9 malem.
+          {kosong
+            ? 'Bunga 0%, SLIK bersih, nggak ada yang nagih jam 9 malem. Itu udah menang satu ronde.'
+            : 'Nolak paylater: bunga 0%, SLIK bersih, nggak ada yang nagih jam 9 malem.'}
         </p>
 
-        {/* Desktop: apa saja yang TIDAK lo bayar */}
-        <div aria-hidden className="mt-8 hidden lg:block">
+        {/* Apa saja yang TIDAK lo bayar (tampil di HP juga) */}
+        <div className="mt-4 lg:mt-8">
           <div className="ledger border-t-2 border-t-tinta">
             <span className="kode">BNG-00</span>
             <span>BUNGA + DENDA</span>
@@ -122,17 +136,27 @@ export function Scene05cSavingPath() {
               {Array.from({ length: JUMLAH_LEMBAR }, (_, i) => (
                 <li key={i} data-lembar aria-hidden className="-mt-[3px] first:mt-0" style={{ visibility: 'hidden' }}>
                   <div
-                    className="flex h-[1.6rem] items-stretch border-2 border-tinta bg-kertas font-mono text-[0.6875rem] font-bold leading-none text-tinta shadow-[2px_2px_0_rgb(var(--tinta)/0.2)] lg:h-[1.95rem] lg:text-xs"
+                    className={`flex h-[1.6rem] items-stretch border-2 bg-kertas font-mono text-[0.6875rem] font-bold leading-none lg:h-[1.95rem] lg:text-xs ${
+                      kosong
+                        ? 'border-dashed border-tinta/60 text-tinta-pudar'
+                        : 'border-tinta text-tinta shadow-[2px_2px_0_rgb(var(--tinta)/0.2)]'
+                    }`}
                     style={{ transform: `translateX(${ACAK[i][0]}px) rotate(${ACAK[i][1]}deg)` }}
                   >
-                    {/* Blok hijau asli + teks tinta: aman kontrasnya */}
-                    <span className="grid w-9 place-items-center border-r-2 border-tinta bg-aman lg:w-11">
+                    {/* Berisi: blok hijau asli + teks tinta (aman kontrasnya). Kosong: tanpa warna. */}
+                    <span
+                      className={`grid w-9 place-items-center border-r-2 lg:w-11 ${
+                        kosong ? 'border-dashed border-tinta/60' : 'border-tinta bg-aman'
+                      }`}
+                    >
                       {String(i + 1).padStart(2, '0')}
                     </span>
                     <span className="flex flex-1 items-center justify-between gap-2 px-2 tracking-[0.14em]">
-                      <span>SETOR BLN</span>
+                      <span className={kosong ? 'line-through' : ''}>SETOR BLN</span>
                       <span className="flex-1 border-b border-dotted border-tinta/40" />
-                      <span>Rp</span>
+                      <span className={kosong ? 'line-through' : ''}>
+                        {kosong ? 'Rp 0' : formatRupiahRingkas(setoran)}
+                      </span>
                     </span>
                     <span className="w-2 border-l-2 border-tinta bg-[repeating-linear-gradient(0deg,rgb(var(--tinta))_0_2px,transparent_2px_4px)]" />
                   </div>
@@ -150,8 +174,11 @@ export function Scene05cSavingPath() {
                 transition={{ type: 'spring', stiffness: 420, damping: 18 }}
                 className="absolute -right-3 top-6 lg:-right-10"
               >
-                <span className="stempel bg-kertas/70 text-base text-aman-teks lg:text-xl" style={{ ['--putar' as string]: '3deg' }}>
-                  0% bunga
+                <span
+                  className={`stempel bg-kertas/70 text-base lg:text-xl ${kosong ? 'text-tinta' : 'text-aman-teks'}`}
+                  style={{ ['--putar' as string]: '3deg' }}
+                >
+                  {kosong ? 'Utang: 0' : '0% bunga'}
                 </span>
               </motion.span>
             )}
@@ -165,12 +192,19 @@ export function Scene05cSavingPath() {
               {String(masuk).padStart(2, '0')}
               <span className="lg:text-3xl lg:text-tinta-pudar">/{JUMLAH_LEMBAR}</span>
             </p>
-            {sisa > 0 && (
-              <p className="mt-2 max-w-[24ch] text-sm leading-snug text-tinta lg:mt-5">
-                Kalau sisa lo utuh ditabung:{' '}
-                <strong className="whitespace-nowrap font-mono">{formatRupiah(sisa * masuk)}</strong>
-              </p>
-            )}
+            <p className="mt-2 max-w-[26ch] text-sm leading-snug text-tinta lg:mt-5">
+              {kosong ? (
+                <>
+                  Terkumpul: <strong className="whitespace-nowrap font-mono">Rp 0</strong>. Slip baru keisi kalau
+                  struknya udah plus.
+                </>
+              ) : (
+                <>
+                  Setoran {formatRupiahRingkas(setoran)}/bulan, terkumpul{' '}
+                  <strong className="whitespace-nowrap font-mono">{formatRupiah(setoran * masuk)}</strong>
+                </>
+              )}
+            </p>
           </div>
         </div>
 
@@ -187,8 +221,18 @@ export function Scene05cSavingPath() {
 
         <div className="zona-jempol">
           <button type="button" onClick={next} className="tombol-cta">
-            Lanjut
+            {kosong ? 'Lanjut lihat masa depan' : 'Lanjut'}
           </button>
+          {kosong && (
+            // Sobekan & jawaban lain tersimpan: balik ke struk tanpa mengulang apa pun
+            <button
+              type="button"
+              onClick={() => goTo('struk')}
+              className="mx-auto mt-2 flex min-h-sentuh items-center px-4 font-display text-sm font-medium text-tinta underline underline-offset-4 lg:mx-0 lg:px-0"
+            >
+              Balik ke struk, sobek gaya hidup
+            </button>
+          )}
         </div>
       </div>
     </section>
