@@ -85,14 +85,18 @@ export default function Page() {
       <ProgressBar3Babak />
       {!preloaderSelesai && <Scene00Preloader onDone={tutupPreloader} />}
 
-      <main>
-        <AnimatePresence mode="wait" initial={false}>
+      {/* relative TANPA z-index: scene lama yang sedang keluar diposisikan absolut di sini,
+          dan modal fixed z-50 di dalam scene tetap bisa menutupi header z-40 */}
+      <main className="relative">
+        {/* Crossfade, bukan "wait": scene baru masuk SAAT scene lama memudar,
+            jadi tidak pernah ada layar kosong di antara keduanya */}
+        <AnimatePresence mode="popLayout" initial={false}>
           <motion.div
             key={scene}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
             exit={{ opacity: 0 }}
-            transition={{ duration: 0.16 }}
+            transition={{ duration: 0.22, ease: 'easeOut' }}
           >
             {renderScene(scene, preloaderSelesai)}
           </motion.div>
